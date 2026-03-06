@@ -1,23 +1,34 @@
+import { useState, useCallback } from 'react';
+import type { IOcrService, OcrStatus } from '../types/ocrTypes';
 
-import { useState } from 'react';
-import { IOcrService, OcrStatus } from '../types/ocrTypes';
-import { TesseractOcrService } from '../services/tesseractOcrService';
-import { formatText } from '../services/textFormatterService';
-
-export function useOcrProcessor(service: IOcrService = new TesseractOcrService()) {
+export const useOcrProcessor = (ocrService: IOcrService) => {
   const [status, setStatus] = useState<OcrStatus>('idle');
-  const [text, setText] = useState('');
+  const [text, setText] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
 
-  const process = async (file: File) => {
-    try {
+  const process = useCallback(
+    async (file: File) => {
       setStatus('loading');
-      const result = await service.extractText(file);
-      setText(formatText(result.text));
-      setStatus('success');
-    } catch {
-      setStatus('error');
-    }
-  };
+      setError(null);
+      setText('');
 
-  return { status, text, process };
-}
+      try {
+        const result = await ocrService.extractText(file);
+        setText(result.text);
+        setStatus('success');
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred during OCR processing.';
+        setError(errorMessage);
+        setStatus('error');
+      }
+    },
+    [ocrService]
+  );
+
+  return {
+    status,
+    text,
+    error,
+    process,
+  };
+};

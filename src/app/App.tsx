@@ -1,13 +1,8 @@
 import React from 'react';
-import { ImageDropzone } from '../features/ocr/components/ImageDropzone';
+// 1. Notice we are importing the Workspace now, NOT the Dropzone directly!
+import { OcrWorkspace } from '../features/ocr/components/OcrWorkspace';
 
 function App() {
-  // Temporary placeholder until I build the OCR engine
-  const handleImageCaptured = (file: File) => {
-    console.log('Image successfully captured:', file.name, file.size, file.type);
-    alert(`Success! \nCaptured: ${file.name}\nNext step: Send this to the Tesseract Engine!`);
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl w-full space-y-10">
@@ -22,9 +17,9 @@ function App() {
           </p>
         </div>
         
-        {/* Main Workspace */}
+        {/* Main Workspace - The Brains are now injected here! */}
         <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-200">
-          <ImageDropzone onImageCaptured={handleImageCaptured} />
+          <OcrWorkspace />
         </div>
 
       </div>
