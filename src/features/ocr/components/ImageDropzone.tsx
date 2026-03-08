@@ -17,10 +17,8 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({ onImageCaptured })
     };
   }, [previewUrl]);
 
-  // Wrapped in useCallback to satisfy React's strict exhaustive-deps rule
   const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith('image/')) return;
-    
     setPreviewUrl(URL.createObjectURL(file));
     onImageCaptured(file);
   }, [onImageCaptured]);
@@ -67,8 +65,8 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({ onImageCaptured })
       onDrop={onDrop}
       className={`relative w-full h-64 border-2 border-dashed rounded-xl flex items-center justify-center cursor-pointer overflow-hidden transition-all duration-200 ease-in-out ${
         isDragging 
-          ? 'border-blue-500 bg-blue-50' 
-          : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
+          ? 'border-[#4D694E] bg-[#FFF3D5]/50' 
+          : 'border-[#4D694E]/30 bg-[#FFF3D5]/10 hover:bg-[#FFF3D5]/40'
       }`}
     >
       <input
@@ -86,21 +84,22 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({ onImageCaptured })
             alt="Preview" 
             className="w-full h-full object-contain p-2"
           />
-          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 flex items-center justify-center">
-            <p className="text-white font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-md">
+          {/* Olive Green Hover Overlay */}
+          <div className="absolute inset-0 bg-[#4D694E] bg-opacity-0 group-hover:bg-opacity-80 transition-all duration-200 flex items-center justify-center">
+            <p className="text-[#FFF3D5] font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-md">
               Click or drag to replace
             </p>
           </div>
         </div>
       ) : (
         <div className="text-center p-6 pointer-events-none">
-          <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="mx-auto h-12 w-12 text-[#4D694E]/50 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          <p className="text-sm font-medium text-gray-700">
-            <span className="text-blue-600 hover:text-blue-500">Click to upload</span>, drag and drop, or paste (Ctrl+V)
+          <p className="text-sm font-medium text-[#4D694E]/80">
+            <span className="text-[#4D694E] font-bold hover:opacity-80">Click to upload</span>, drag and drop, or paste (Ctrl+V)
           </p>
-          <p className="mt-1 text-xs text-gray-500">Supports PNG, JPG, WEBP, GIF</p>
+          <p className="mt-1 text-xs text-[#4D694E]/50">Supports PNG, JPG, WEBP, GIF</p>
         </div>
       )}
     </div>

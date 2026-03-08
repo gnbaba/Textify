@@ -1,5 +1,5 @@
 import { createWorker, Worker, PSM } from 'tesseract.js';
-import type { IOcrService } from '../types/ocrTypes';
+import type { IOcrService, ExtractionMode } from '../types/ocrTypes';
 
 class TesseractOcrService implements IOcrService {
   private static instance: TesseractOcrService;
@@ -41,10 +41,6 @@ class TesseractOcrService implements IOcrService {
         logger: this.handleLog,
       });
       
-      await worker.setParameters({
-        tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
-      });
-
       this.worker = worker;
       return worker;
     } catch (error) {
@@ -61,20 +57,24 @@ class TesseractOcrService implements IOcrService {
 
       img.onload = () => {
         URL.revokeObjectURL(objectUrl);
-        
+    
         const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        
+        const scale = 2; 
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+    
         const ctx = canvas.getContext('2d');
         if (!ctx) {
           reject(new Error('Failed to get 2D context for canvas'));
           return;
         }
-
-        ctx.filter = 'grayscale(100%) contrast(150%)';
+    
+        ctx.filter = 'grayscale(100%) brightness(80%) contrast(200%)';
+        ctx.scale(scale, scale);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0);
-        
+    
         resolve(canvas);
       };
 
@@ -88,7 +88,8 @@ class TesseractOcrService implements IOcrService {
   }
 
   public async extractText(
-    file: File, 
+    file: File,
+    mode: ExtractionMode,
     onProgress?: (progress: number) => void
   ): Promise<{ text: string }> {
     this.currentOnProgress = onProgress;
@@ -96,6 +97,11 @@ class TesseractOcrService implements IOcrService {
     try {
       const worker = await this.getWorker();
       const canvas = await this.preprocessImage(file);
+      
+      await worker.setParameters({
+        tessedit_pageseg_mode: mode === 'graphic' ? PSM.SINGLE_BLOCK : PSM.AUTO,
+      });
+
       const { data } = await worker.recognize(canvas);
       
       return { text: data.text };

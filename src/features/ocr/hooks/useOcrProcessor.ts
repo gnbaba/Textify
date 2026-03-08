@@ -1,7 +1,5 @@
-// File 3: src/features/ocr/hooks/useOcrProcessor.ts
-
 import { useState, useCallback } from 'react';
-import type { IOcrService, OcrStatus } from '../types/ocrTypes';
+import type { IOcrService, OcrStatus, ExtractionMode } from '../types/ocrTypes';
 
 export const useOcrProcessor = (ocrService: IOcrService) => {
   const [status, setStatus] = useState<OcrStatus>('idle');
@@ -10,14 +8,14 @@ export const useOcrProcessor = (ocrService: IOcrService) => {
   const [progress, setProgress] = useState<number>(0);
 
   const process = useCallback(
-    async (file: File) => {
+    async (file: File, mode: ExtractionMode = 'document') => {
       setStatus('loading');
       setError(null);
       setText('');
       setProgress(0);
 
       try {
-        const result = await ocrService.extractText(file, (currentProgress) => {
+        const result = await ocrService.extractText(file, mode, (currentProgress) => {
           setProgress(currentProgress);
         });
         
