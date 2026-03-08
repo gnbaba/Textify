@@ -1,3 +1,5 @@
+// File 2: src/features/ocr/services/tesseractOcrService.ts
+
 import { createWorker, Worker } from 'tesseract.js';
 import type { IOcrService } from '../types/ocrTypes';
 
@@ -5,6 +7,7 @@ class TesseractOcrService implements IOcrService {
   private static instance: TesseractOcrService;
   private worker: Worker | null = null;
   private initializationPromise: Promise<Worker> | null = null;
+  private currentOnProgress?: (progress: number) => void;
 
   private constructor() {}
 
@@ -14,6 +17,13 @@ class TesseractOcrService implements IOcrService {
     }
     return TesseractOcrService.instance;
   }
+
+  private handleLog = (m: { status: string; progress: number }) => {
+    if (m.status === 'recognizing text' && this.currentOnProgress) {
+      const percentage = Math.round(m.progress * 100);
+      this.currentOnProgress(percentage);
+    }
+  };
 
   private async getWorker(): Promise<Worker> {
     if (this.worker) {
@@ -29,7 +39,9 @@ class TesseractOcrService implements IOcrService {
 
   private async initWorker(): Promise<Worker> {
     try {
-      const worker = await createWorker('eng');
+      const worker = await createWorker('eng', 1, {
+        logger: this.handleLog,
+      });
       this.worker = worker;
       return worker;
     } catch (error) {
@@ -39,7 +51,12 @@ class TesseractOcrService implements IOcrService {
     }
   }
 
-  public async extractText(file: File): Promise<{ text: string }> {
+  public async extractText(
+    file: File, 
+    onProgress?: (progress: number) => void
+  ): Promise<{ text: string }> {
+    this.currentOnProgress = onProgress;
+    
     try {
       const worker = await this.getWorker();
       const { data } = await worker.recognize(file);
@@ -48,6 +65,16 @@ class TesseractOcrService implements IOcrService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`OCR processing failed: ${errorMessage}`);
+    } finally {
+      this.currentOnProgress = undefined;
+    }
+  }
+
+  public async terminateWorker(): Promise<void> {
+    if (this.worker) {
+      await this.worker.terminate();
+      this.worker = null;
+      this.initializationPromise = null;
     }
   }
 }
