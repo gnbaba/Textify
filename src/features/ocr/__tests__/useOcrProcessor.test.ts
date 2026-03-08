@@ -40,7 +40,11 @@ describe('useOcrProcessor', () => {
     });
 
     expect(result.current.text).toBe(expectedText);
-    expect(mockOcrService.extractText).toHaveBeenCalledWith(mockFile, expect.any(Function));
+    expect(mockOcrService.extractText).toHaveBeenCalledWith(
+      mockFile, 
+      'document', 
+      expect.any(Function)
+    );
     expect(mockOcrService.extractText).toHaveBeenCalledTimes(1);
   });
 
