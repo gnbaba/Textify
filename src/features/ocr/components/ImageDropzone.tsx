@@ -1,117 +1,108 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 
-interface ImageDropzoneProps {
+export interface ImageDropzoneProps {
   onImageCaptured: (file: File) => void;
 }
 
 export const ImageDropzone: React.FC<ImageDropzoneProps> = ({ onImageCaptured }) => {
-  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const processFile = useCallback((file: File | null | undefined) => {
-    if (file && file.type.startsWith('image/')) {
-      onImageCaptured(file);
-    }
-  }, [onImageCaptured]);
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    
-    const file = e.dataTransfer.files?.[0];
-    processFile(file);
-  };
-
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    processFile(file);
-    
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const handleClick = () => {
-    fileInputRef.current?.click();
-  };
-
   useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-      const items = e.clipboardData?.items;
-      if (!items) return;
-
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') !== -1) {
-          const file = items[i].getAsFile();
-          processFile(file);
-          break;
-        }
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
       }
     };
+  }, [previewUrl]);
 
-    window.addEventListener('paste', handlePaste);
-    return () => {
-      window.removeEventListener('paste', handlePaste);
+  // Wrapped in useCallback to satisfy React's strict exhaustive-deps rule
+  const handleFile = useCallback((file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    
+    setPreviewUrl(URL.createObjectURL(file));
+    onImageCaptured(file);
+  }, [onImageCaptured]);
+
+  const onDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const onDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  }, [handleFile]);
+
+  useEffect(() => {
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      if (e.clipboardData?.files && e.clipboardData.files.length > 0) {
+        handleFile(e.clipboardData.files[0]);
+      }
     };
-  }, [processFile]);
+    window.addEventListener('paste', handleGlobalPaste);
+    return () => window.removeEventListener('paste', handleGlobalPaste);
+  }, [handleFile]);
+
+  const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleFile(e.target.files[0]);
+    }
+  };
 
   return (
     <div
-      onClick={handleClick}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-      className={`flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200 ease-in-out ${
-        isDragging
-          ? 'border-blue-500 bg-blue-50 scale-[1.02]'
-          : 'border-gray-300 bg-gray-50 hover:bg-gray-100 hover:border-gray-400'
+      onClick={() => fileInputRef.current?.click()}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      className={`relative w-full h-64 border-2 border-dashed rounded-xl flex items-center justify-center cursor-pointer overflow-hidden transition-all duration-200 ease-in-out ${
+        isDragging 
+          ? 'border-blue-500 bg-blue-50' 
+          : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
       }`}
-      role="button"
-      tabIndex={0}
-      aria-label="Image dropzone"
     >
-      <div className="flex flex-col items-center justify-center pt-5 pb-6 text-gray-500 pointer-events-none">
-        <svg 
-          className={`w-12 h-12 mb-4 transition-colors duration-200 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24" 
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth="2" 
-            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-          />
-        </svg>
-        <p className="mb-2 text-sm md:text-base">
-          <span className="font-semibold">Click to upload</span>, drag and drop, or paste (Ctrl+V)
-        </p>
-        <p className="text-xs text-gray-400">
-          Supports PNG, JPG, WEBP, GIF
-        </p>
-      </div>
       <input
         type="file"
-        className="hidden"
-        accept="image/*"
         ref={fileInputRef}
-        onChange={handleFileInput}
+        onChange={onFileInputChange}
+        accept="image/*"
+        className="hidden"
       />
+
+      {previewUrl ? (
+        <div className="relative w-full h-full group">
+          <img 
+            src={previewUrl} 
+            alt="Preview" 
+            className="w-full h-full object-contain p-2"
+          />
+          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 flex items-center justify-center">
+            <p className="text-white font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-md">
+              Click or drag to replace
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="text-center p-6 pointer-events-none">
+          <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <p className="text-sm font-medium text-gray-700">
+            <span className="text-blue-600 hover:text-blue-500">Click to upload</span>, drag and drop, or paste (Ctrl+V)
+          </p>
+          <p className="mt-1 text-xs text-gray-500">Supports PNG, JPG, WEBP, GIF</p>
+        </div>
+      )}
     </div>
   );
 };

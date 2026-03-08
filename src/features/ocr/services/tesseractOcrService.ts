@@ -1,6 +1,4 @@
-// File 2: src/features/ocr/services/tesseractOcrService.ts
-
-import { createWorker, Worker } from 'tesseract.js';
+import { createWorker, Worker, PSM } from 'tesseract.js';
 import type { IOcrService } from '../types/ocrTypes';
 
 class TesseractOcrService implements IOcrService {
@@ -42,6 +40,11 @@ class TesseractOcrService implements IOcrService {
       const worker = await createWorker('eng', 1, {
         logger: this.handleLog,
       });
+      
+      await worker.setParameters({
+        tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
+      });
+
       this.worker = worker;
       return worker;
     } catch (error) {
@@ -49,6 +52,39 @@ class TesseractOcrService implements IOcrService {
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to initialize OCR engine: ${errorMessage}`);
     }
+  }
+
+  private preprocessImage(file: File): Promise<HTMLCanvasElement> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Failed to get 2D context for canvas'));
+          return;
+        }
+
+        ctx.filter = 'grayscale(100%) contrast(150%)';
+        ctx.drawImage(img, 0, 0);
+        
+        resolve(canvas);
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error('Failed to load image for preprocessing'));
+      };
+
+      img.src = objectUrl;
+    });
   }
 
   public async extractText(
@@ -59,7 +95,8 @@ class TesseractOcrService implements IOcrService {
     
     try {
       const worker = await this.getWorker();
-      const { data } = await worker.recognize(file);
+      const canvas = await this.preprocessImage(file);
+      const { data } = await worker.recognize(canvas);
       
       return { text: data.text };
     } catch (error) {
