@@ -16,7 +16,7 @@ class TesseractOcrService implements IOcrService {
     return TesseractOcrService.instance;
   }
 
-  private handleLog = (m: any) => {
+  private handleLog = (m: { status: string; progress: number }) => {
     if (m.status === 'recognizing text' && this.currentOnProgress) {
       const percentage = Math.round(m.progress * 100);
       this.currentOnProgress(percentage);

@@ -9,7 +9,6 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({ onImageCaptured })
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // PRO MOVE: Clean up the object URL to prevent memory leaks!
   useEffect(() => {
     return () => {
       if (previewUrl) {
@@ -18,14 +17,13 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({ onImageCaptured })
     };
   }, [previewUrl]);
 
-  const handleFile = (file: File) => {
+  // Wrapped in useCallback to satisfy React's strict exhaustive-deps rule
+  const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith('image/')) return;
     
-    // Set the visual preview
     setPreviewUrl(URL.createObjectURL(file));
-    // Send it to the brain
     onImageCaptured(file);
-  };
+  }, [onImageCaptured]);
 
   const onDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -43,15 +41,8 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({ onImageCaptured })
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFile(e.dataTransfer.files[0]);
     }
-  }, [onImageCaptured]);
+  }, [handleFile]);
 
-  const onPaste = useCallback((e: React.ClipboardEvent) => {
-    if (e.clipboardData.files && e.clipboardData.files.length > 0) {
-      handleFile(e.clipboardData.files[0]);
-    }
-  }, [onImageCaptured]);
-
-  // Attach paste listener to the window so the user can paste anywhere
   useEffect(() => {
     const handleGlobalPaste = (e: ClipboardEvent) => {
       if (e.clipboardData?.files && e.clipboardData.files.length > 0) {
@@ -60,7 +51,7 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({ onImageCaptured })
     };
     window.addEventListener('paste', handleGlobalPaste);
     return () => window.removeEventListener('paste', handleGlobalPaste);
-  }, []);
+  }, [handleFile]);
 
   const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -89,14 +80,12 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({ onImageCaptured })
       />
 
       {previewUrl ? (
-        // Preview State
         <div className="relative w-full h-full group">
           <img 
             src={previewUrl} 
             alt="Preview" 
             className="w-full h-full object-contain p-2"
           />
-          {/* Hover Overlay to let users know they can replace it */}
           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 flex items-center justify-center">
             <p className="text-white font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-md">
               Click or drag to replace
@@ -104,7 +93,6 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({ onImageCaptured })
           </div>
         </div>
       ) : (
-        // Empty State
         <div className="text-center p-6 pointer-events-none">
           <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
