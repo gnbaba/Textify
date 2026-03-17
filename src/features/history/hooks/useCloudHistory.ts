@@ -1,113 +1,99 @@
-import { useState, useCallback } from 'react';
-import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { useState, useEffect, useCallback } from 'react';
+import { collection, addDoc, deleteDoc, doc, updateDoc, arrayUnion, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
+
+export interface ExtractionBlock {
+  id: string;
+  text: string;
+  timestamp: number;
+}
 
 export interface CloudDocument {
   id: string;
   title: string;
-  text: string;
+  blocks: ExtractionBlock[];
   timestamp: number;
 }
 
 export const useCloudHistory = (userId: string | undefined) => {
   const [documents, setDocuments] = useState<CloudDocument[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const fetchHistory = useCallback(async () => {
+  useEffect(() => {
     if (!userId) {
       setDocuments([]);
+      setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
-    setError(null);
+    const documentsRef = collection(db, 'users', userId, 'documents');
+    const q = query(documentsRef, orderBy('timestamp', 'desc'));
 
-    try {
-      const documentsRef = collection(db, 'users', userId, 'documents');
-      const q = query(documentsRef, orderBy('timestamp', 'desc'));
-      const querySnapshot = await getDocs(q);
-      
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const fetchedDocs: CloudDocument[] = querySnapshot.docs.map((docSnapshot) => {
         const data = docSnapshot.data();
+        const legacyBlocks = data.text ? [{ id: 'legacy', text: data.text, timestamp: data.timestamp }] : [];
+        
         return {
           id: docSnapshot.id,
           title: typeof data.title === 'string' ? data.title : 'Untitled',
-          text: typeof data.text === 'string' ? data.text : '',
+          blocks: Array.isArray(data.blocks) ? data.blocks : legacyBlocks,
           timestamp: typeof data.timestamp === 'number' ? data.timestamp : 0,
         };
       });
-
       setDocuments(fetchedDocs);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch history.';
-      setError(errorMessage);
-    } finally {
       setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [userId]);
+
+  const createSession = useCallback(async (text: string, title: string): Promise<CloudDocument | null> => {
+    if (!userId) return null;
+    try {
+      const newBlock = { id: crypto.randomUUID(), text, timestamp: Date.now() };
+      const newDocData = { title, blocks: [newBlock], timestamp: Date.now() };
+      const docRef = await addDoc(collection(db, 'users', userId, 'documents'), newDocData);
+      return { id: docRef.id, ...newDocData } as CloudDocument;
+    } catch (err) {
+      console.error('Failed to create session:', err);
+      return null;
     }
   }, [userId]);
 
-  const saveExtraction = useCallback(async (text: string, title?: string) => {
-    if (!userId) {
-      setError('User must be authenticated to save extractions.');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
+  const addToSession = useCallback(async (sessionId: string, text: string) => {
+    if (!userId) return;
     try {
-      const documentsRef = collection(db, 'users', userId, 'documents');
-      const newDocData = {
-        title: title || 'Untitled Extraction',
-        text,
-        timestamp: Date.now(),
-      };
-
-      const docRef = await addDoc(documentsRef, newDocData);
-      
-      const newDocument: CloudDocument = {
-        id: docRef.id,
-        ...newDocData,
-      };
-
-      setDocuments((prevDocs) => [newDocument, ...prevDocs]);
+      const newBlock = { id: crypto.randomUUID(), text, timestamp: Date.now() };
+      const documentRef = doc(db, 'users', userId, 'documents', sessionId);
+      await updateDoc(documentRef, {
+        blocks: arrayUnion(newBlock),
+        timestamp: Date.now() 
+      });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to save extraction.';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
+      console.error('Failed to add to session:', err);
     }
   }, [userId]);
 
   const deleteExtraction = useCallback(async (documentId: string) => {
-    if (!userId) {
-      setError('User must be authenticated to delete extractions.');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
+    if (!userId) return;
     try {
-      const documentRef = doc(db, 'users', userId, 'documents', documentId);
-      await deleteDoc(documentRef);
-      
-      setDocuments((prevDocs) => prevDocs.filter((d) => d.id !== documentId));
+      await deleteDoc(doc(db, 'users', userId, 'documents', documentId));
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete extraction.';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
+      console.error('Failed to delete:', err);
     }
   }, [userId]);
 
-  return {
-    documents,
-    isLoading,
-    error,
-    fetchHistory,
-    saveExtraction,
-    deleteExtraction,
-  };
+  const renameSession = useCallback(async (sessionId: string, newTitle: string) => {
+    if (!userId || !newTitle.trim()) return;
+    try {
+      const documentRef = doc(db, 'users', userId, 'documents', sessionId);
+      await updateDoc(documentRef, { title: newTitle.trim() });
+    } catch (err) {
+      console.error('Failed to rename:', err);
+    }
+  }, [userId]);
+
+  return { documents, isLoading, createSession, addToSession, deleteExtraction, renameSession };
 };
