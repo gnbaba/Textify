@@ -21,7 +21,7 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
   );
 };
 
-// Create a custom hook so the components can easily tune in
+// eslint-disable-next-line react-refresh/only-export-components
 export const useWorkspace = () => {
   const context = useContext(WorkspaceContext);
   if (context === undefined) {

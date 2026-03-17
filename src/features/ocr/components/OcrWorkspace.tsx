@@ -12,7 +12,7 @@ import { db } from '../../../config/firebase';
 export const OcrWorkspace: React.FC = () => {
   const { user } = useAuth();
   const { documents, createSession, addToSession } = useCloudHistory(user?.uid);
-  const { status, text, error, progress, process } = useOcrProcessor(tesseractOcrService);
+  const { status, text, progress, process } = useOcrProcessor(tesseractOcrService);
   const { activeDocument, setActiveDocument } = useWorkspace();
   
   const [mode, setMode] = useState<ExtractionMode>('document');
