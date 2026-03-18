@@ -61,7 +61,7 @@ const compressImage = async (file: File): Promise<File> => {
 };
 
 export const OcrWorkspace: React.FC = () => {
-  const { user, loginWithGoogle } = useAuth();
+  const { user } = useAuth();
   const { documents, createSession, addToSession } = useCloudHistory(user?.uid);
   const { status, text, progress, process } = useOcrProcessor(tesseractOcrService);
   const { activeDocument, setActiveDocument } = useWorkspace();
@@ -168,13 +168,13 @@ export const OcrWorkspace: React.FC = () => {
     }
 
     try {
-      // Intercept the file and shrink it before giving it to Tesseract
       const safeFile = await compressImage(file);
       await process(safeFile, mode);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Processing error:", error);
-      // --- ADD THIS LINE ---
-      alert(`OCR FAILED: ${error.message || JSON.stringify(error)}`);
+      // Safely check if the error is a standard Error object 
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      alert(`OCR FAILED: ${errorMessage}`);
     } finally {
       setIsPreparing(false);
     }
