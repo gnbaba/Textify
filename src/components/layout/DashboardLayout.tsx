@@ -3,10 +3,12 @@ import { useWorkspace } from '../../shared/context/WorkspaceContext';
 import { useAuth } from '../../features/auth/hooks/useAuth';
 import { useCloudHistory } from '../../features/history/hooks/useCloudHistory';
 
+import { LoginModal } from '../../features/auth/components/LoginModal';
+
 export const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
   
-  const { user, isAuthLoading, loginWithGoogle, logout } = useAuth();
+  const { user, isAuthLoading, logout } = useAuth();
   const { documents, isLoading: isHistoryLoading, deleteExtraction, renameSession } = useCloudHistory(user?.uid);
   const { setActiveDocument, activeDocument } = useWorkspace();
 
@@ -16,19 +18,19 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
   const [sessionToRename, setSessionToRename] = useState<{ id: string, title: string } | null>(null);
   const [renameInput, setRenameInput] = useState("");
+  
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   const formatDate = (timestamp: number) => {
     return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(timestamp));
   };
 
-  
   const handleDeleteSessionClick = (docId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setSessionToDelete(docId);
     setOpenMenuId(null);
   };
 
-  
   const confirmDelete = async () => {
     if (sessionToDelete) {
       await deleteExtraction(sessionToDelete);
@@ -37,15 +39,13 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
     setSessionToDelete(null);
   };
 
-  
   const handleRenameSessionClick = (docId: string, currentTitle: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setSessionToRename({ id: docId, title: currentTitle });
-    setRenameInput(currentTitle); // Pre-fill the input with the current name
+    setRenameInput(currentTitle);
     setOpenMenuId(null);
   };
 
-  
   const confirmRename = async () => {
     if (sessionToRename && renameInput.trim() !== "" && renameInput.trim() !== sessionToRename.title) {
       await renameSession(sessionToRename.id, renameInput.trim());
@@ -53,13 +53,28 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
     setSessionToRename(null);
   };
 
+  const handleMobileNavClose = () => {
+    if (window.innerWidth < 768) setIsSidebarOpen(false);
+  };
+
   const safeAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || user?.email || 'User')}&background=4D694E&color=FFF3D5`;
 
   return (
     <div className="flex h-screen bg-[#FFF3D5]/20 overflow-hidden font-sans relative">
       
-      {/* Sidebar */}
-      <div className={`z-50 bg-[#FFF3D5] border-r border-[#4D694E]/10 flex flex-col transition-all duration-300 ease-in-out shadow-inner ${isSidebarOpen ? 'w-72 opacity-100' : 'w-0 opacity-0 overflow-hidden'}`}>
+      <div 
+        className={`md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={() => setIsSidebarOpen(false)}
+      />
+
+      <div className={`
+        fixed md:relative inset-y-0 left-0 z-50 h-full
+        bg-[#FFF3D5] border-r border-[#4D694E]/10 flex flex-col shadow-inner
+        transition-all duration-300 ease-in-out
+        ${isSidebarOpen 
+          ? 'translate-x-0 w-72 opacity-100' 
+          : '-translate-x-full md:translate-x-0 md:w-0 opacity-0 overflow-hidden'}
+      `}>
         <div className="p-4 flex justify-between items-center border-b border-[#4D694E]/10 min-w-[18rem]">
           <span className="font-extrabold text-xl text-[#4D694E] tracking-tight">Textify</span>
           <button onClick={() => setIsSidebarOpen(false)} className="p-2 rounded-lg text-[#4D694E]/60 hover:bg-[#4D694E]/10 hover:text-[#4D694E] transition-colors">
@@ -68,7 +83,10 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
         </div>
 
         <div className="p-4 min-w-[18rem]">
-          <button onClick={() => { setActiveDocument(null); setOpenMenuId(null); }} className="w-full flex items-center justify-center gap-2 bg-[#4D694E] text-[#FFF3D5] py-2.5 px-4 rounded-xl font-semibold text-sm hover:bg-[#4D694E]/90 transition-all shadow-sm">
+          <button 
+            onClick={() => { setActiveDocument(null); setOpenMenuId(null); handleMobileNavClose(); }} 
+            className="w-full flex items-center justify-center gap-2 bg-[#4D694E] text-[#FFF3D5] py-2.5 px-4 rounded-xl font-semibold text-sm hover:bg-[#4D694E]/90 transition-all shadow-sm"
+          >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
             New Extraction
           </button>
@@ -87,7 +105,10 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
             ) : (
               documents.map((item) => (
                 <div key={item.id} className="relative group" onMouseEnter={() => setHoveredDocId(item.id)} onMouseLeave={() => setHoveredDocId(null)}>
-                  <button onClick={() => { setActiveDocument(item); setOpenMenuId(null); }} className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors group flex items-start gap-3 ${activeDocument?.id === item.id ? 'bg-[#4D694E]/10' : 'hover:bg-[#4D694E]/10'}`}>
+                  <button 
+                    onClick={() => { setActiveDocument(item); setOpenMenuId(null); handleMobileNavClose(); }} 
+                    className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors group flex items-start gap-3 ${activeDocument?.id === item.id ? 'bg-[#4D694E]/10' : 'hover:bg-[#4D694E]/10'}`}
+                  >
                     <div className="flex-1 overflow-hidden">
                       <p className="text-sm font-medium text-[#4D694E] truncate pr-6">{item.title}</p>
                       <p className="text-xs text-[#4D694E]/60 mt-0.5">{formatDate(item.timestamp)}</p>
@@ -134,7 +155,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                   />
                   <div>
                     <p className="font-bold text-[#4D694E] tracking-tight">{user.displayName || 'Cloud User'}</p>
-                    <p className="text-xs font-semibold text-[#4D694E]/60 mt-0.5 px-2 py-0.5 inline-block bg-[#4D694E]/5 border border-[#4D694E]/10 rounded-md">Free Plan</p>
+                    <p className="text-xs font-semibold text-[#4D694E]/60 mt-0.5 px-2 py-0.5 inline-block bg-[#4D694E]/5 border border-[#4D694E]/10 rounded-md">Pro Plan</p>
                   </div>
                 </div>
                 
@@ -144,7 +165,8 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                 </button>
               </div>
             ) : (
-              <button onClick={loginWithGoogle} className="w-full bg-[#4D694E] text-[#FFF3D5] py-3 px-5 rounded-xl text-sm font-bold shadow-md hover:bg-[#4D694E]/90 transition-all flex items-center gap-2 justify-center">
+
+              <button onClick={() => setIsLoginModalOpen(true)} className="w-full bg-[#4D694E] text-[#FFF3D5] py-3 px-5 rounded-xl text-sm font-bold shadow-md hover:bg-[#4D694E]/90 transition-all flex items-center gap-2 justify-center">
                 Sign in with Google
               </button>
             )}
@@ -169,7 +191,6 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
         </main>
       </div>
 
-      {/* Delete Confirmation Modal */}
       {sessionToDelete && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
@@ -197,7 +218,6 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
         </div>
       )}
 
-      {/* Rename Session Modal */}
       {sessionToRename && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-[#FFF3D5] rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 border border-[#4D694E]/20">
@@ -232,6 +252,8 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
           </div>
         </div>
       )}
+      
+      <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
 
     </div>
   );

@@ -4,7 +4,10 @@ import {
   User, 
   signInWithPopup, 
   GoogleAuthProvider, 
-  signOut 
+  signOut,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence
 } from 'firebase/auth';
 import { auth } from '../../../config/firebase';
 
@@ -20,9 +23,18 @@ export const useAuth = () => {
     return () => unsubscribe();
   }, []);
 
-  const loginWithGoogle = async () => {
+  // Added rememberMe parameter with default to true
+  const loginWithGoogle = async (rememberMe: boolean = true) => {
     try {
+      // Set persistence based on the user's "Remember Me" choice
+      const persistenceType = rememberMe ? browserLocalPersistence : browserSessionPersistence;
+      await setPersistence(auth, persistenceType);
+
       const provider = new GoogleAuthProvider();
+      
+      // Force the account chooser so you can switch accounts easily
+      provider.setCustomParameters({ prompt: 'select_account' });
+      
       await signInWithPopup(auth, provider);
     } catch (error) {
       console.error("Failed to log in with Google:", error);
