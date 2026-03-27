@@ -162,7 +162,8 @@ export const OcrWorkspace: React.FC = () => {
     };
 
     triggerCatcher();
-  }, [status, text, mode, !!displayDocument, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, text, mode, displayDocument?.id, user]);
 
   const handleCopyText = async (textToCopy: string, blockId: string) => {
     try {
