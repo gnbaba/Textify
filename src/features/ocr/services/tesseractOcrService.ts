@@ -59,21 +59,27 @@ class TesseractOcrService implements IOcrService {
         URL.revokeObjectURL(objectUrl);
     
         const canvas = document.createElement('canvas');
-        const scale = 2; 
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
+        canvas.width = img.width;
+        canvas.height = img.height;
     
         const ctx = canvas.getContext('2d');
         if (!ctx) {
           reject(new Error('Failed to get 2D context for canvas'));
           return;
         }
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if ('filter' in ctx) {
+          try {
+            ctx.filter = 'grayscale(100%) brightness(80%) contrast(200%)';
+          } catch (e) {
+            console.warn('Canvas filter gracefully skipped:', e);
+          }
+        }
     
-        ctx.filter = 'grayscale(100%) brightness(80%) contrast(200%)';
-        ctx.scale(scale, scale);
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(img, 0, 0);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     
         resolve(canvas);
       };
@@ -100,12 +106,19 @@ class TesseractOcrService implements IOcrService {
       
       await worker.setParameters({
         tessedit_pageseg_mode: mode === 'graphic' ? PSM.SINGLE_BLOCK : PSM.AUTO,
+        user_defined_dpi: '300', 
       });
 
       const { data } = await worker.recognize(canvas);
       
+      // Forces the UI error banner if the engine reads a blank image
+      if (!data.text || data.text.trim() === '') {
+        throw new Error('No readable text detected. Please try a clearer photo or different mode.');
+      }
+      
       return { text: data.text };
     } catch (error) {
+      console.error('OCR Extraction Error:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`OCR processing failed: ${errorMessage}`);
     } finally {

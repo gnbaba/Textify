@@ -52,9 +52,15 @@ export const useCloudHistory = (userId: string | undefined) => {
   const createSession = useCallback(async (text: string, title: string): Promise<CloudDocument | null> => {
     if (!userId) return null;
     try {
-      const newBlock = { id: crypto.randomUUID(), text, timestamp: Date.now() };
+      // Mobile-safe ID generation
+      const safeId = typeof crypto !== 'undefined' && crypto.randomUUID 
+        ? crypto.randomUUID() 
+        : Date.now().toString(36) + Math.random().toString(36).substring(2);
+
+      const newBlock = { id: safeId, text, timestamp: Date.now() };
       const newDocData = { title, blocks: [newBlock], timestamp: Date.now() };
       const docRef = await addDoc(collection(db, 'users', userId, 'documents'), newDocData);
+      
       return { id: docRef.id, ...newDocData } as CloudDocument;
     } catch (err) {
       console.error('Failed to create session:', err);
