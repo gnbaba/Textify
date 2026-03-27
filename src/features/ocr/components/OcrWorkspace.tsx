@@ -10,8 +10,7 @@ import { doc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { LoginModal } from '../../auth/components/LoginModal';
 
-// Image Compressor Utility
-// This prevents mobile browsers from crashing when handling 10MB+ camera photos
+// Compresses image and applies fallback canvas to prevent mobile memory crashes
 const compressImage = async (file: File): Promise<File> => {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -21,26 +20,41 @@ const compressImage = async (file: File): Promise<File> => {
       img.src = event.target?.result as string;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1500; // Safe limit for Tesseract RAM usage
+        const MAX_WIDTH = 1500;
         const MAX_HEIGHT = 1500;
         let width = img.width;
         let height = img.height;
 
         if (width > height) {
           if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
+            height = Math.round((height * MAX_WIDTH) / width);
             width = MAX_WIDTH;
           }
         } else {
           if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
+            width = Math.round((width * MAX_HEIGHT) / height);
             height = MAX_HEIGHT;
           }
         }
+        
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
+
+        if (ctx) {
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
+
+          if ('filter' in ctx) {
+            try {
+              ctx.filter = 'grayscale(100%) brightness(80%) contrast(200%)';
+            } catch (e) {
+              console.warn("Canvas filter gracefully skipped:", e);
+            }
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+        }
         
         canvas.toBlob((blob) => {
           if (blob) {
@@ -50,9 +64,9 @@ const compressImage = async (file: File): Promise<File> => {
             });
             resolve(newFile);
           } else {
-            resolve(file); // Fallback if compression fails
+            resolve(file); 
           }
-        }, 'image/jpeg', 0.8); // 80% quality compression
+        }, 'image/jpeg', 0.8); 
       };
       img.onerror = () => resolve(file);
     };
@@ -63,8 +77,11 @@ const compressImage = async (file: File): Promise<File> => {
 export const OcrWorkspace: React.FC = () => {
   const { user } = useAuth();
   const { documents, createSession, addToSession } = useCloudHistory(user?.uid);
-  const { status, text, progress, process } = useOcrProcessor(tesseractOcrService);
+  const { status, text, progress, process, error } = useOcrProcessor(tesseractOcrService);
   const { activeDocument, setActiveDocument } = useWorkspace();
+  
+  // Dynamically serves Cloud data for logged-in users, or Local data for guests
+  const displayDocument = user ? (activeDocument ? documents.find(d => d.id === activeDocument.id) || null : null) : activeDocument;
   
   const [mode, setMode] = useState<ExtractionMode>('document');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -77,11 +94,7 @@ export const OcrWorkspace: React.FC = () => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
 
-  const liveActiveDocument = activeDocument 
-    ? documents.find(d => d.id === activeDocument.id) || null 
-    : null;
-
-  // 3-Day Cooldown Checker
+  // Manages 3-day cooldown timer for guest limits
   const checkAndResetCooldown = () => {
     const exhaustedDateStr = localStorage.getItem('textify_exhausted_date');
     if (exhaustedDateStr) {
@@ -89,7 +102,6 @@ export const OcrWorkspace: React.FC = () => {
       const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
       
       if (Date.now() - exhaustedDate >= THREE_DAYS_MS) {
-        // 3 days have passed! Reset the user's free limits.
         localStorage.setItem('textify_guest_scans', '0');
         localStorage.removeItem('textify_exhausted_date');
         setGuestScansCount(0);
@@ -107,24 +119,66 @@ export const OcrWorkspace: React.FC = () => {
     }
   }, [user]);
 
+  // Captures OCR result and routes it to Cloud or Local storage
   useEffect(() => {
-    if (status === 'success' && text && text !== lastSavedTextRef.current) {
-      lastSavedTextRef.current = text;
+    const triggerCatcher = async () => {
+      if (status !== 'success' || !text) return;
+      if (text === lastSavedTextRef.current) return;
       
-      if (liveActiveDocument) {
-        addToSession(liveActiveDocument.id, text);
-      } else {
-        const title = mode === 'document' ? 'Document Scan' : 'Graphic Scan';
-        createSession(text, title).then(newDoc => {
-          if (newDoc) setActiveDocument(newDoc);
-        });
+      lastSavedTextRef.current = text;
+
+      const safeId = typeof crypto !== 'undefined' && crypto.randomUUID 
+        ? crypto.randomUUID() 
+        : Date.now().toString(36) + Math.random().toString(36).substring(2);
+
+      try {
+        if (displayDocument?.id) {
+          if (user) {
+            await addToSession(displayDocument.id, text);
+          } else {
+            setActiveDocument({ 
+              ...displayDocument, 
+              blocks: [...displayDocument.blocks, { id: safeId, text, timestamp: Date.now() }] 
+            });
+          }
+        } else {
+          const title = mode === 'document' ? 'Document Scan' : 'Graphic Scan';
+          
+          if (user) {
+            const newDoc = await createSession(text, title);
+            if (newDoc) setActiveDocument(newDoc);
+          } else {
+            setActiveDocument({
+              id: 'guest_session_' + Date.now(),
+              title: title,
+              blocks: [{ id: safeId, text, timestamp: Date.now() }],
+              timestamp: Date.now()
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Session creation failed:", err);
       }
-    }
-  }, [status, text, mode, liveActiveDocument, createSession, addToSession, setActiveDocument]);
+    };
+
+    triggerCatcher();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, text, mode, displayDocument?.id, user]);
 
   const handleCopyText = async (textToCopy: string, blockId: string) => {
     try {
-      await navigator.clipboard.writeText(textToCopy);
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(textToCopy);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = textToCopy;
+        textArea.style.position = "fixed"; 
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
       setCopiedId(blockId);
       setTimeout(() => setCopiedId(null), 2000);
     } catch (err) {
@@ -132,11 +186,19 @@ export const OcrWorkspace: React.FC = () => {
     }
   };
 
+  // Deletes block from Cloud if logged in, or Local state if guest
   const confirmDeleteBlock = async () => {
-    if (!user || !liveActiveDocument || !blockToDelete) return;
+    if (!displayDocument || !blockToDelete) return;
     try {
-        const documentRef = doc(db, 'users', user.uid, 'documents', liveActiveDocument.id);
+      if (user) {
+        const documentRef = doc(db, 'users', user.uid, 'documents', displayDocument.id);
         await updateDoc(documentRef, { blocks: arrayRemove(blockToDelete) });
+      } else {
+        setActiveDocument({
+          ...displayDocument,
+          blocks: displayDocument.blocks.filter(b => b.id !== blockToDelete.id)
+        });
+      }
     } catch (err) {
         console.error('Failed to delete block:', err);
     }
@@ -146,6 +208,7 @@ export const OcrWorkspace: React.FC = () => {
   const handleProcessImage = async (file: File) => {
     if (status === 'loading' || isPreparing) return;
     setIsPreparing(true);
+    lastSavedTextRef.current = '';
 
     if (!user) {
       checkAndResetCooldown();
@@ -161,7 +224,6 @@ export const OcrWorkspace: React.FC = () => {
       localStorage.setItem('textify_guest_scans', newCount.toString());
       setGuestScansCount(newCount);
 
-      // Start the 3-day timer the moment they hit scan #10
       if (newCount === 10) {
         localStorage.setItem('textify_exhausted_date', Date.now().toString());
       }
@@ -172,7 +234,6 @@ export const OcrWorkspace: React.FC = () => {
       await process(safeFile, mode);
     } catch (error) {
       console.error("Processing error:", error);
-      // Safely check if the error is a standard Error object 
       const errorMessage = error instanceof Error ? error.message : String(error);
       alert(`OCR FAILED: ${errorMessage}`);
     } finally {
@@ -227,16 +288,23 @@ export const OcrWorkspace: React.FC = () => {
             <div className="bg-[#4D694E] h-3 transition-all duration-300" style={{ width: `${progress > 0 ? progress : 5}%` }} />
           </div>
         )}
+
+        {status === 'error' && error && (
+          <div className="w-full bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm font-mono break-all animate-in fade-in duration-300 shadow-sm">
+            <span className="font-bold uppercase text-xs tracking-wider block mb-1">Processing Failed</span>
+            {error}
+          </div>
+        )}
       </div>
 
-      {liveActiveDocument ? (
+      {displayDocument ? (
         <div className="space-y-6 mt-8 border-t border-[#4D694E]/10 pt-8 animate-in fade-in duration-500">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
-             <h2 className="text-xl md:text-2xl font-extrabold text-[#4D694E] truncate pr-4">{liveActiveDocument.title}</h2>
+             <h2 className="text-xl md:text-2xl font-extrabold text-[#4D694E] truncate pr-4">{displayDocument.title}</h2>
              <span className="text-xs font-bold bg-[#4D694E]/10 text-[#4D694E] px-3 py-1.5 rounded-full self-start md:self-auto whitespace-nowrap">Active Session</span>
           </div>
 
-          {liveActiveDocument.blocks.map((block) => (
+          {displayDocument.blocks.map((block) => (
             <div key={block.id} className="bg-white rounded-xl border border-[#4D694E]/20 shadow-sm overflow-hidden mb-6">
               <div className="p-4 md:p-5">
                 <textarea readOnly value={block.text} className="w-full h-40 md:h-48 p-3 md:p-4 rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-[#4D694E] bg-[#FFF3D5]/30 border border-[#4D694E]/20 text-gray-800 font-mono text-xs md:text-sm leading-relaxed" />
