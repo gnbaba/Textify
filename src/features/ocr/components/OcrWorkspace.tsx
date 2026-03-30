@@ -9,6 +9,11 @@ import type { ExtractionMode } from '../types/ocrTypes';
 import { doc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { LoginModal } from '../../auth/components/LoginModal';
+import { DndContext, DragEndEvent, closestCenter, } from '@dnd-kit/core';
+
+import { SortableContext, verticalListSortingStrategy,arrayMove, } from '@dnd-kit/sortable';
+
+import { SortableBlock } from './SortableBlock';
 
 // Compresses image and applies fallback canvas to prevent mobile memory crashes
 const compressImage = async (file: File): Promise<File> => {
@@ -241,6 +246,39 @@ export const OcrWorkspace: React.FC = () => {
     }
   };
 
+  const handleDragEnd = async (event: DragEndEvent): Promise<void> => {
+    const { active, over } = event;
+  
+    if (!over || active.id === over.id) return;
+    if (!displayDocument) return;
+  
+    const oldIndex = displayDocument.blocks.findIndex(
+      (block) => block.id === active.id
+    );
+  
+    const newIndex = displayDocument.blocks.findIndex(
+      (block) => block.id === over.id
+    );
+  
+    if (oldIndex === -1 || newIndex === -1) return;
+  
+    const newBlocks = arrayMove(displayDocument.blocks, oldIndex, newIndex);
+  
+    try {
+      if (user) {
+        const documentRef = doc(db, 'users', user.uid, 'documents', displayDocument.id);
+        await updateDoc(documentRef, { blocks: newBlocks });
+      } else {
+        setActiveDocument({
+          ...displayDocument,
+          blocks: newBlocks,
+        });
+      }
+    } catch (err) {
+      console.error('Reorder failed:', err);
+    }
+  };
+
   return (
     <div className="w-full max-w-5xl mx-auto relative px-4 md:px-0">
       <div className="mb-6 space-y-4 md:space-y-6">
@@ -304,23 +342,23 @@ export const OcrWorkspace: React.FC = () => {
              <span className="text-xs font-bold bg-[#4D694E]/10 text-[#4D694E] px-3 py-1.5 rounded-full self-start md:self-auto whitespace-nowrap">Active Session</span>
           </div>
 
-          {displayDocument.blocks.map((block) => (
-            <div key={block.id} className="bg-white rounded-xl border border-[#4D694E]/20 shadow-sm overflow-hidden mb-6">
-              <div className="p-4 md:p-5">
-                <textarea readOnly value={block.text} className="w-full h-40 md:h-48 p-3 md:p-4 rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-[#4D694E] bg-[#FFF3D5]/30 border border-[#4D694E]/20 text-gray-800 font-mono text-xs md:text-sm leading-relaxed" />
-              </div>
-              
-              <div className="px-4 md:px-5 py-3 bg-gray-50/50 border-t border-gray-100 flex justify-between items-center gap-2">
-                <button onClick={() => setBlockToDelete(block)} className="text-red-500 hover:text-red-600 flex items-center justify-center gap-2 px-4 py-3 md:py-2 rounded-lg hover:bg-red-50 transition-colors font-semibold text-sm min-w-[44px]" title="Delete this extraction">
-                   <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                   <span className="hidden md:inline">Delete</span>
-                </button>
-                <button onClick={() => handleCopyText(block.text, block.id)} className={`px-6 py-3 md:py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center space-x-2 shadow-sm min-w-[120px] ${copiedId === block.id ? 'bg-[#4D694E] text-[#FFF3D5]' : 'bg-white border border-[#4D694E]/20 text-[#4D694E] hover:bg-[#4D694E]/5'}`}>
-                  <span>{copiedId === block.id ? 'Copied!' : 'Copy Text'}</span>
-                </button>
-              </div>
-            </div>
-          ))}
+          <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext
+              items={displayDocument.blocks.map((block) => block.id)}
+              strategy={verticalListSortingStrategy}
+            >
+                {displayDocument.blocks.map((block) => (
+                  <SortableBlock
+                    key={block.id}
+                    id={block.id}
+                    text={block.text}
+                    onCopy={handleCopyText}
+                    onDelete={() => setBlockToDelete(block)}
+                    isCopied={copiedId === block.id}
+                  />
+              ))}
+            </SortableContext>
+          </DndContext>
         </div>
       ) : (
         <div className="text-center py-12 px-4 animate-in fade-in duration-500">
