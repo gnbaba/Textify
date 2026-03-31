@@ -195,23 +195,24 @@ export const OcrWorkspace: React.FC = () => {
   const handleToggleSelect = (blockId: string) => {
     setSelectedBlockIds((prev) => 
       prev.includes(blockId) 
-        ? prev.filter(id => id !== blockId)
-        : [...prev, blockId]                
+        ? prev.filter(id => id !== blockId) 
+        : [...prev, blockId]
     );
-
-    useEffect(() => {
-      if (displayDocument) {
-        const allBlockIds = displayDocument.blocks.map(b => b.id);
-          setSelectedBlockIds((prev) => {
-          const existingSelections = prev.filter(id => allBlockIds.includes(id));
-          const newBlocks = allBlockIds.filter(id => !prev.includes(id) && !existingSelections.includes(id));
-          return [...existingSelections, ...newBlocks]; 
-        });
-      } else {
-        setSelectedBlockIds([]);
-      }
-    }, [displayDocument]);
   };
+
+  useEffect(() => {
+    if (displayDocument) {
+      const allBlockIds = displayDocument.blocks.map(b => b.id);
+      
+      setSelectedBlockIds((prev) => {
+        const existingSelections = prev.filter(id => allBlockIds.includes(id));
+        const newBlocks = allBlockIds.filter(id => !prev.includes(id) && !existingSelections.includes(id));
+        return [...existingSelections, ...newBlocks]; 
+      });
+    } else {
+      setSelectedBlockIds([]);
+    }
+  }, [displayDocument]); 
 
   // Deletes block from Cloud if logged in, or Local state if guest
   const confirmDeleteBlock = async () => {
