@@ -93,6 +93,7 @@ export const OcrWorkspace: React.FC = () => {
   const lastSavedTextRef = useRef<string | null>(null);
 
   const [blockToDelete, setBlockToDelete] = useState<ExtractionBlock | null>(null);
+  const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([]);
   
   const [guestScansCount, setGuestScansCount] = useState<number>(0);
   const [showLimitModal, setShowLimitModal] = useState<boolean>(false);
@@ -190,6 +191,28 @@ export const OcrWorkspace: React.FC = () => {
       console.error('Failed to copy', err);
     }
   };
+
+  const handleToggleSelect = (blockId: string) => {
+    setSelectedBlockIds((prev) => 
+      prev.includes(blockId) 
+        ? prev.filter(id => id !== blockId) 
+        : [...prev, blockId]
+    );
+  };
+
+  useEffect(() => {
+    if (displayDocument) {
+      const allBlockIds = displayDocument.blocks.map(b => b.id);
+      
+      setSelectedBlockIds((prev) => {
+        const existingSelections = prev.filter(id => allBlockIds.includes(id));
+        const newBlocks = allBlockIds.filter(id => !prev.includes(id) && !existingSelections.includes(id));
+        return [...existingSelections, ...newBlocks]; 
+      });
+    } else {
+      setSelectedBlockIds([]);
+    }
+  }, [displayDocument]); 
 
   // Deletes block from Cloud if logged in, or Local state if guest
   const confirmDeleteBlock = async () => {
@@ -355,6 +378,8 @@ export const OcrWorkspace: React.FC = () => {
                     onCopy={handleCopyText}
                     onDelete={() => setBlockToDelete(block)}
                     isCopied={copiedId === block.id}
+                    isSelected={selectedBlockIds.includes(block.id)}
+                    onToggleSelect={() => handleToggleSelect(block.id)}
                   />
               ))}
             </SortableContext>
