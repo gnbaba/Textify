@@ -97,3 +97,9 @@ Start server
 
 ```bash
 npm run dev
+
+```
+
+## Live Demo
+
+https://textify-ocr-vision.vercel.app/app
