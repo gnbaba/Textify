@@ -10,10 +10,9 @@ import { doc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { LoginModal } from '../../auth/components/LoginModal';
 import { DndContext, DragEndEvent, closestCenter, } from '@dnd-kit/core';
-
 import { SortableContext, verticalListSortingStrategy,arrayMove, } from '@dnd-kit/sortable';
-
 import { SortableBlock } from './SortableBlock';
+import { ExportModal } from './ExportModal';
 
 // Compresses image and applies fallback canvas to prevent mobile memory crashes
 const compressImage = async (file: File): Promise<File> => {
@@ -94,6 +93,7 @@ export const OcrWorkspace: React.FC = () => {
 
   const [blockToDelete, setBlockToDelete] = useState<ExtractionBlock | null>(null);
   const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([]);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   
   const [guestScansCount, setGuestScansCount] = useState<number>(0);
   const [showLimitModal, setShowLimitModal] = useState<boolean>(false);
@@ -361,8 +361,22 @@ export const OcrWorkspace: React.FC = () => {
       {displayDocument ? (
         <div className="space-y-6 mt-8 border-t border-[#4D694E]/10 pt-8 animate-in fade-in duration-500">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
-             <h2 className="text-xl md:text-2xl font-extrabold text-[#4D694E] truncate pr-4">{displayDocument.title}</h2>
-             <span className="text-xs font-bold bg-[#4D694E]/10 text-[#4D694E] px-3 py-1.5 rounded-full self-start md:self-auto whitespace-nowrap">Active Session</span>
+ 
+             <div className="flex items-center gap-3">
+               <h2 className="text-xl md:text-2xl font-extrabold text-[#4D694E] truncate pr-4">{displayDocument.title}</h2>
+               <span className="text-xs font-bold bg-[#4D694E]/10 text-[#4D694E] px-3 py-1.5 rounded-full self-start md:self-auto whitespace-nowrap">Active Session</span>
+             </div>
+
+             <button 
+               onClick={() => setIsExportModalOpen(true)}
+               disabled={selectedBlockIds.length === 0}
+               className="bg-[#4D694E] text-[#FFF3D5] px-5 py-2.5 md:py-2 rounded-xl font-bold text-sm shadow-sm hover:shadow-md hover:bg-[#3a4f3b] transition-all disabled:opacity-50 flex items-center justify-center gap-2 w-full md:w-auto"
+             >
+               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+               </svg>
+               Export
+             </button>
           </div>
 
           <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -447,6 +461,14 @@ export const OcrWorkspace: React.FC = () => {
         </div>
       )}
       <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
+      
+      <ExportModal 
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        blocks={displayDocument ? displayDocument.blocks : []}
+        selectedIds={selectedBlockIds}
+        documentTitle={displayDocument ? displayDocument.title : 'Textify Document'}
+      />
     </div>
   );
 };
