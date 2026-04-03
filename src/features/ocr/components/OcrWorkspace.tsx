@@ -10,7 +10,7 @@ import { doc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { LoginModal } from '../../auth/components/LoginModal';
 import { DndContext, DragEndEvent, closestCenter, } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy,arrayMove, } from '@dnd-kit/sortable';
+import { SortableContext, verticalListSortingStrategy, arrayMove, } from '@dnd-kit/sortable';
 import { SortableBlock } from './SortableBlock';
 import { ExportModal } from './ExportModal';
 
@@ -99,6 +99,29 @@ export const OcrWorkspace: React.FC = () => {
   const [showLimitModal, setShowLimitModal] = useState<boolean>(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // --- NEW: Splash Screen & Back Button Trap State ---
+  const [showSplash, setShowSplash] = useState(true);
+
+  // --- NEW: Splash Screen Timer & History Trap Effect ---
+  useEffect(() => {
+    // 1. The Splash Screen Timer (3 seconds)
+    const timer = setTimeout(() => setShowSplash(false), 3000);
+
+    // 2. The "Back Button" Trap
+    window.history.pushState(null, '', window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, '', window.location.href);
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
 
   // Manages 3-day cooldown timer for guest limits
   const checkAndResetCooldown = () => {
@@ -214,7 +237,7 @@ export const OcrWorkspace: React.FC = () => {
     }
   }, [displayDocument]); 
 
-  // Deletes block from Cloud if logged in, or Local state if guest
+  // Deletes block from Cloud if logged in, or local state if guest
   const confirmDeleteBlock = async () => {
     if (!displayDocument || !blockToDelete) return;
     try {
@@ -231,42 +254,6 @@ export const OcrWorkspace: React.FC = () => {
         console.error('Failed to delete block:', err);
     }
     setBlockToDelete(null);
-  };
-
-  const handleProcessImage = async (file: File) => {
-    if (status === 'loading' || isPreparing) return;
-    setIsPreparing(true);
-    lastSavedTextRef.current = '';
-
-    if (!user) {
-      checkAndResetCooldown();
-      const currentScans = parseInt(localStorage.getItem('textify_guest_scans') || '0', 10);
-      
-      if (currentScans >= 10) {
-        setShowLimitModal(true);
-        setIsPreparing(false);
-        return; 
-      }
-      
-      const newCount = currentScans + 1;
-      localStorage.setItem('textify_guest_scans', newCount.toString());
-      setGuestScansCount(newCount);
-
-      if (newCount === 10) {
-        localStorage.setItem('textify_exhausted_date', Date.now().toString());
-      }
-    }
-
-    try {
-      const safeFile = await compressImage(file);
-      await process(safeFile, mode);
-    } catch (error) {
-      console.error("Processing error:", error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      alert(`OCR FAILED: ${errorMessage}`);
-    } finally {
-      setIsPreparing(false);
-    }
   };
 
   const handleDragEnd = async (event: DragEndEvent): Promise<void> => {
@@ -302,13 +289,85 @@ export const OcrWorkspace: React.FC = () => {
     }
   };
 
+  // Main processing function with Gatekeeper and Throttler integrated
+  const handleProcessImage = async (file: File) => {
+    // Prevents multiple clicks while already processing
+    if (status === 'loading' || isPreparing || isProcessing) return;
+
+    // Validate File Type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      alert("Invalid file type. Please upload a JPG, PNG, or WEBP image.");
+      return; 
+    }
+
+    // Validate File Size 
+    const maxSizeInBytes = 10 * 1024 * 1024; 
+    if (file.size > maxSizeInBytes) {
+      alert("File is too large. Please keep images under 5MB.");
+      return; 
+    }
+    // Lock the workspace to prevent spam
+    setIsPreparing(true);
+    setIsProcessing(true);
+    lastSavedTextRef.current = '';
+
+    if (!user) {
+      checkAndResetCooldown();
+      const currentScans = parseInt(localStorage.getItem('textify_guest_scans') || '0', 10);
+      
+      if (currentScans >= 10) {
+        setShowLimitModal(true);
+        setIsPreparing(false);
+        setIsProcessing(false);
+        return; 
+      }
+      
+      const newCount = currentScans + 1;
+      localStorage.setItem('textify_guest_scans', newCount.toString());
+      setGuestScansCount(newCount);
+
+      if (newCount === 10) {
+        localStorage.setItem('textify_exhausted_date', Date.now().toString());
+      }
+    }
+
+    // Process the validated image
+    try {
+      const safeFile = await compressImage(file);
+      await process(safeFile, mode);
+    } catch (error) {
+      console.error("Processing error:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      alert(`OCR FAILED: ${errorMessage}`);
+    } finally {
+      setIsPreparing(false);
+      // 3 second delay before allowing another scan
+      setTimeout(() => {
+        setIsProcessing(false);
+      }, 3000);
+    }
+  };
+
+  if (showSplash) {
+    return (
+      <div className="fixed inset-0 z-[999] bg-[#FFF3D5] flex items-center justify-center">
+        <img 
+          src="/textify-logo.png" 
+          alt="Textify Loading" 
+          className="w-24 h-24 md:w-32 md:h-32 object-contain animate-pulse" 
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-5xl mx-auto relative px-4 md:px-0">
       <div className="mb-6 space-y-4 md:space-y-6">
         
         <div className="flex flex-col md:flex-row justify-center gap-3 md:gap-1 md:bg-[#FFF3D5] md:p-1.5 md:rounded-xl md:shadow-sm md:border md:border-[#4D694E]/20">
           <div className={`flex items-center gap-2 px-5 py-4 md:py-2 rounded-xl md:rounded-lg transition-all border md:border-none ${mode === 'document' ? 'bg-[#4D694E] text-white shadow-md border-[#4D694E]' : 'bg-white md:bg-transparent text-[#4D694E] hover:bg-[#4D694E]/10 border-[#4D694E]/20'}`}>
-            <button onClick={() => setMode('document')} className="text-base md:text-sm font-semibold flex-grow text-left">
+            <button onClick={() => setMode('document')} disabled={isProcessing} className="text-base md:text-sm font-semibold flex-grow text-left disabled:opacity-50">
               Document Mode
             </button>
             <button type="button" className={`group relative flex items-center justify-center w-6 h-6 md:w-5 md:h-5 rounded-full border text-xs font-bold focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-white/50 ${mode === 'document' ? 'border-white/40 text-white/80' : 'border-[#4D694E]/40 text-[#4D694E]/70'}`}>
@@ -321,7 +380,7 @@ export const OcrWorkspace: React.FC = () => {
           </div>
 
           <div className={`flex items-center gap-2 px-5 py-4 md:py-2 rounded-xl md:rounded-lg transition-all border md:border-none ${mode === 'graphic' ? 'bg-[#4D694E] text-white shadow-md border-[#4D694E]' : 'bg-white md:bg-transparent text-[#4D694E] hover:bg-[#4D694E]/10 border-[#4D694E]/20'}`}>
-            <button onClick={() => setMode('graphic')} className="text-base md:text-sm font-semibold flex-grow text-left">
+            <button onClick={() => setMode('graphic')} disabled={isProcessing} className="text-base md:text-sm font-semibold flex-grow text-left disabled:opacity-50">
               Graphic Mode
             </button>
             <button type="button" className={`group relative flex items-center justify-center w-6 h-6 md:w-5 md:h-5 rounded-full border text-xs font-bold focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-white/50 ${mode === 'graphic' ? 'border-white/40 text-white/80' : 'border-[#4D694E]/40 text-[#4D694E]/70'}`}>
@@ -334,7 +393,9 @@ export const OcrWorkspace: React.FC = () => {
           </div>
         </div>
 
-        <ImageDropzone onImageCaptured={handleProcessImage} />
+        <div className={isProcessing ? 'opacity-50 pointer-events-none' : ''}>
+          <ImageDropzone onImageCaptured={handleProcessImage} />
+        </div>
 
         {!user && (
           <div className="text-center mt-2">
@@ -344,7 +405,7 @@ export const OcrWorkspace: React.FC = () => {
           </div>
         )}
 
-        {(status === 'loading' || isPreparing) && (
+        {(status === 'loading' || isPreparing || isProcessing) && (
           <div className="w-full bg-[#4D694E]/20 rounded-full h-3 overflow-hidden">
             <div className="bg-[#4D694E] h-3 transition-all duration-300" style={{ width: `${progress > 0 ? progress : 5}%` }} />
           </div>

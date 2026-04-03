@@ -62,6 +62,22 @@ const PRICING_TIERS = [
   },
 ];
 
+// Content for our new Legal & Support Modal
+const LEGAL_CONTENT = {
+  privacy: {
+    title: "Privacy Policy",
+    body: "Textify is built with privacy at its core. When you scan an image, the Optical Character Recognition (OCR) process happens entirely locally inside your browser. We never upload, save, or view your original images. If you choose to log in, your extracted text is securely encrypted and stored in your private Cloud Firestore database, accessible only by you."
+  },
+  terms: {
+    title: "Terms of Service",
+    body: "By using Textify, you agree to use the tool responsibly. This service is provided 'as is' without any warranties. We reserve the right to restrict access to users who attempt to abuse the API, upload malicious files, or overwhelm the platform with automated bot traffic. Please do not use this tool to extract sensitive or illegal information."
+  },
+  support: {
+    title: "Support & Contact",
+    body: "Having trouble extracting text or found a bug? Since Textify is a developer project, the best way to get help is by reaching out directly to the creator. You can contact @gnbaba on GitHub for any technical support, issue reporting, or feature requests."
+  }
+};
+
 const FadeIn = ({ children, delay = 0 }: { children: React.ReactNode, delay?: number }) => {
   const [isVisible, setIsVisible] = useState(false);
   const domRef = useRef<HTMLDivElement>(null);
@@ -139,14 +155,43 @@ const PricingCard = ({ tier }: { tier: typeof PRICING_TIERS[0] }) => (
         </li>
       ))}
     </ul>
-    <Link to="/app" className={`w-full block text-center py-3 rounded-full font-bold transition-colors shadow-sm hover:shadow-md text-sm md:text-base ${tier.isPro ? 'bg-[#4D694E] text-[#FFF3D5] hover:bg-[#3a4f3b]' : 'bg-[#FFF3D5] text-[#4D694E] border border-[#4D694E]/20 hover:bg-[#f5e5be]'}`}>
+    <Link to="/app" replace className={`w-full block text-center py-3 rounded-full font-bold transition-colors shadow-sm hover:shadow-md text-sm md:text-base ${tier.isPro ? 'bg-[#4D694E] text-[#FFF3D5] hover:bg-[#3a4f3b]' : 'bg-[#FFF3D5] text-[#4D694E] border border-[#4D694E]/20 hover:bg-[#f5e5be]'}`}>
       {tier.buttonText}
     </Link>
   </div>
 );
 
+const InfoModal = ({ type, onClose }: { type: 'privacy' | 'terms' | 'support' | null, onClose: () => void }) => {
+  if (!type) return null;
+  const content = LEGAL_CONTENT[type];
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200 px-4">
+      <div className="bg-[#FFF3D5] rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 border border-[#4D694E]/20">
+        <div className="p-6 md:p-8 relative">
+          <button onClick={onClose} className="absolute top-4 right-4 text-[#4D694E]/60 hover:text-[#4D694E] transition-colors focus:outline-none rounded-full p-1 hover:bg-[#4D694E]/10">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <h3 className="text-2xl font-extrabold text-[#4D694E] mb-4">{content.title}</h3>
+          <p className="text-[#4D694E]/80 leading-relaxed text-sm md:text-base font-medium">
+            {content.body}
+          </p>
+          <div className="mt-8 flex justify-end">
+            <button onClick={onClose} className="bg-[#4D694E] text-[#FFF3D5] px-6 py-2.5 rounded-xl font-bold text-sm shadow-sm hover:shadow-md hover:bg-[#3a4f3b] transition-all">
+              Got it
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const LandingPage = () => {
   const [showTopBtn, setShowTopBtn] = useState(false);
+  const [infoModalType, setInfoModalType] = useState<'privacy' | 'terms' | 'support' | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -166,9 +211,11 @@ export const LandingPage = () => {
       {/* Navbar */}
       <nav className="relative z-20 w-full max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-6 flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-700">
         <div className="flex items-center space-x-2">
-          <svg className="w-6 h-6 md:w-8 md:h-8 text-[#4D694E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
+          <img 
+            src="/textify-logo.png" 
+            alt="Textify Logo" 
+            className="w-10 h-10 md:w-15 md:h-15 object-contain" 
+          />
           <span className="text-xl md:text-2xl font-extrabold tracking-tighter">Textify</span>
         </div>
 
@@ -177,7 +224,8 @@ export const LandingPage = () => {
           <a href="#how-it-works" className="hover:text-[#3a4f3b] transition-colors">How it Works</a>
           <a href="#pricing" className="hover:text-[#3a4f3b] transition-colors">Tiers</a>
         </div>
-        <Link to="/app" className="bg-[#4D694E] text-[#FFF3D5] px-4 md:px-6 py-2 md:py-2.5 rounded-full font-bold hover:bg-[#3a4f3b] transition-all shadow-sm hover:shadow-md text-sm md:text-base">
+        {/* ADDED 'replace' TO NAVBAR LINK */}
+        <Link to="/app" replace className="bg-[#4D694E] text-[#FFF3D5] px-4 md:px-6 py-2 md:py-2.5 rounded-full font-bold hover:bg-[#3a4f3b] transition-all shadow-sm hover:shadow-md text-sm md:text-base">
           Get Started
         </Link>
       </nav>
@@ -201,7 +249,8 @@ export const LandingPage = () => {
           </FadeIn>
           
           <FadeIn delay={300}>
-            <Link to="/app" className="bg-[#4D694E] text-[#FFF3D5] text-base md:text-lg px-6 md:px-8 py-3 md:py-4 rounded-full font-bold hover:bg-[#3a4f3b] transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center space-x-2 md:space-x-3">
+            {/* ADDED 'replace' TO HERO LINK */}
+            <Link to="/app" replace className="bg-[#4D694E] text-[#FFF3D5] text-base md:text-lg px-6 md:px-8 py-3 md:py-4 rounded-full font-bold hover:bg-[#3a4f3b] transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center space-x-2 md:space-x-3">
               <span>Start Extracting for Free</span>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -304,21 +353,28 @@ export const LandingPage = () => {
       <footer className="w-full bg-[#FFF3D5] border-t border-[#4D694E]/10 py-8 md:py-12">
         <div className="max-w-7xl mx-auto px-4 md:px-6 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6">
           <div className="flex items-center space-x-2">
-            <svg className="w-5 h-5 md:w-6 md:h-6 text-[#4D694E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+            <img 
+              src="/textify-logo.png" 
+              alt="Textify Logo" 
+              className="w-10 h-10 md:w-15 md:h-15 object-contain" 
+            />
             <span className="text-lg md:text-xl font-extrabold tracking-tighter">Textify</span>
           </div>
+          
           <div className="flex space-x-4 md:space-x-6 text-xs md:text-sm font-medium text-[#4D694E]/70">
-            <Link to="/" className="hover:text-[#4D694E] transition-colors">Privacy</Link>
-            <Link to="/" className="hover:text-[#4D694E] transition-colors">Terms</Link>
-            <Link to="/" className="hover:text-[#4D694E] transition-colors">Support</Link>
+            <button onClick={() => setInfoModalType('privacy')} className="hover:text-[#4D694E] transition-colors focus:outline-none">Privacy</button>
+            <button onClick={() => setInfoModalType('terms')} className="hover:text-[#4D694E] transition-colors focus:outline-none">Terms</button>
+            <button onClick={() => setInfoModalType('support')} className="hover:text-[#4D694E] transition-colors focus:outline-none">Support</button>
           </div>
+          
           <div className="text-xs md:text-sm text-[#4D694E]/50 text-center">
             &copy; {new Date().getFullYear()} Textify Inc. All rights reserved.
           </div>
         </div>
       </footer>
+
+      {/* The dynamically injected Legal Modal */}
+      <InfoModal type={infoModalType} onClose={() => setInfoModalType(null)} />
 
       {/* Smooth Scroll to Top Button */}
       <button
