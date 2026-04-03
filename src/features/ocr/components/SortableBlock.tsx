@@ -46,7 +46,6 @@ export const SortableBlock: React.FC<SortableBlockProps> = ({
       }`}
     >
       <div className="flex">
-        {/* Drag Handle (LEFT GRIP ONLY) */}
         <div
           {...attributes}
           {...listeners}
@@ -58,20 +57,18 @@ export const SortableBlock: React.FC<SortableBlockProps> = ({
         </div>
 
         {/* Content */}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0"> 
           <div className="p-4 md:p-5">
             <textarea
               readOnly
               value={text}
-              className="w-full h-40 md:h-48 p-3 md:p-4 rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-[#4D694E] bg-[#FFF3D5]/30 border border-[#4D694E]/20 text-gray-800 font-mono text-xs md:text-sm leading-relaxed"
+              className="w-full h-40 md:h-48 p-3 md:p-4 rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-[#4D694E] bg-[#FFF3D5]/30 border border-[#4D694E]/20 text-gray-800 font-mono text-xs md:text-sm leading-relaxed whitespace-pre-wrap break-words"
             />
           </div>
 
-          {/* Actions */}
-          <div className="px-4 md:px-5 py-3 bg-gray-50/50 border-t border-gray-100 flex justify-between items-center gap-2">
-            
-            {/* --- NEW CHECKBOX --- */}
-            <label className="flex items-center gap-2 cursor-pointer group">
+          <div className="px-4 md:px-5 py-3 bg-gray-50/50 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+
+            <label className="flex items-center gap-2 cursor-pointer group shrink-0">
               <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-[#4D694E] border-[#4D694E]' : 'bg-white border-[#4D694E]/40 group-hover:border-[#4D694E]'}`}>
                 {isSelected && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
               </div>
@@ -79,7 +76,7 @@ export const SortableBlock: React.FC<SortableBlockProps> = ({
               <span className="text-sm font-bold text-[#4D694E] select-none">Select</span>
             </label>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0 ml-auto">
               <button
                 onClick={() => onDelete(id)}
                 className="text-red-500 hover:text-red-600 flex items-center justify-center gap-2 px-4 py-3 md:py-2 rounded-lg hover:bg-red-50 transition-colors font-semibold text-sm min-w-[44px]"

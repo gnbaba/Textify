@@ -224,7 +224,6 @@ export const LandingPage = () => {
           <a href="#how-it-works" className="hover:text-[#3a4f3b] transition-colors">How it Works</a>
           <a href="#pricing" className="hover:text-[#3a4f3b] transition-colors">Tiers</a>
         </div>
-        {/* ADDED 'replace' TO NAVBAR LINK */}
         <Link to="/app" replace className="bg-[#4D694E] text-[#FFF3D5] px-4 md:px-6 py-2 md:py-2.5 rounded-full font-bold hover:bg-[#3a4f3b] transition-all shadow-sm hover:shadow-md text-sm md:text-base">
           Get Started
         </Link>
@@ -249,7 +248,6 @@ export const LandingPage = () => {
           </FadeIn>
           
           <FadeIn delay={300}>
-            {/* ADDED 'replace' TO HERO LINK */}
             <Link to="/app" replace className="bg-[#4D694E] text-[#FFF3D5] text-base md:text-lg px-6 md:px-8 py-3 md:py-4 rounded-full font-bold hover:bg-[#3a4f3b] transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center space-x-2 md:space-x-3">
               <span>Start Extracting for Free</span>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -258,7 +256,6 @@ export const LandingPage = () => {
             </Link>
           </FadeIn>
 
-          {/* Hero Graphic */}
           <FadeIn delay={450}>
             <div className="mt-12 md:mt-16 w-full max-w-3xl mx-auto bg-white rounded-xl shadow-xl border border-[#4D694E]/10 p-6 md:p-8 flex flex-col md:flex-row items-center justify-center gap-6 md:gap-8">
               <div className="w-32 h-32 md:w-48 md:h-48 bg-[#FFF3D5] rounded-xl border-2 border-dashed border-[#4D694E]/30 flex items-center justify-center relative overflow-hidden">
@@ -373,10 +370,8 @@ export const LandingPage = () => {
         </div>
       </footer>
 
-      {/* The dynamically injected Legal Modal */}
       <InfoModal type={infoModalType} onClose={() => setInfoModalType(null)} />
 
-      {/* Smooth Scroll to Top Button */}
       <button
         onClick={scrollToTop}
         className={`fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 p-3 md:p-4 rounded-full bg-[#4D694E] text-[#FFF3D5] shadow-xl border-2 border-[#FFF3D5] hover:bg-[#3a4f3b] hover:-translate-y-1 transition-all duration-300 ease-in-out ${

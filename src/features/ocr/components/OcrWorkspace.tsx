@@ -101,15 +101,11 @@ export const OcrWorkspace: React.FC = () => {
   const [isPreparing, setIsPreparing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // --- NEW: Splash Screen & Back Button Trap State ---
   const [showSplash, setShowSplash] = useState(true);
 
-  // --- NEW: Splash Screen Timer & History Trap Effect ---
   useEffect(() => {
-    // 1. The Splash Screen Timer (3 seconds)
     const timer = setTimeout(() => setShowSplash(false), 3000);
 
-    // 2. The "Back Button" Trap
     window.history.pushState(null, '', window.location.href);
     const handlePopState = () => {
       window.history.pushState(null, '', window.location.href);
