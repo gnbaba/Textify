@@ -100,6 +100,8 @@ export const OcrWorkspace: React.FC = () => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  const [spamWarning, setSpamWarning] = useState(false);
 
   const [showSplash, setShowSplash] = useState(true);
 
@@ -285,10 +287,12 @@ export const OcrWorkspace: React.FC = () => {
     }
   };
 
-  // Main processing function with Gatekeeper and Throttler integrated
   const handleProcessImage = async (file: File) => {
-    // Prevents multiple clicks while already processing
-    if (status === 'loading' || isPreparing || isProcessing) return;
+    if (status === 'loading' || isPreparing || isProcessing) {
+      setSpamWarning(true);
+      setTimeout(() => setSpamWarning(false), 2500);
+      return;
+    }
 
     // Validate File Type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
@@ -303,6 +307,7 @@ export const OcrWorkspace: React.FC = () => {
       alert("File is too large. Please keep images under 5MB.");
       return; 
     }
+    
     // Lock the workspace to prevent spam
     setIsPreparing(true);
     setIsProcessing(true);
@@ -338,7 +343,7 @@ export const OcrWorkspace: React.FC = () => {
       alert(`OCR FAILED: ${errorMessage}`);
     } finally {
       setIsPreparing(false);
-      // 3 second delay before allowing another scan
+      // 3 second cooldown
       setTimeout(() => {
         setIsProcessing(false);
       }, 3000);
@@ -389,6 +394,18 @@ export const OcrWorkspace: React.FC = () => {
           </div>
         </div>
 
+        {spamWarning && (
+          <div className="w-full text-center mb-2 animate-in fade-in slide-in-from-top-2">
+            <span className="inline-flex items-center gap-1.5 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-xs font-bold border border-orange-200 shadow-sm">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Cool down! Please wait a few seconds between scans.
+            </span>
+          </div>
+        )}
+
+        {/* The Dropzone */}
         <div className={isProcessing ? 'opacity-50 pointer-events-none' : ''}>
           <ImageDropzone onImageCaptured={handleProcessImage} />
         </div>
