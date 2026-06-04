@@ -18,6 +18,7 @@ export interface CloudDocument {
 export const useCloudHistory = (userId: string | undefined) => {
   const [documents, setDocuments] = useState<CloudDocument[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!userId) {
@@ -44,6 +45,11 @@ export const useCloudHistory = (userId: string | undefined) => {
       });
       setDocuments(fetchedDocs);
       setIsLoading(false);
+      setError(null);
+    }, (err) => {
+      console.error('Snapshot error:', err);
+      setError("Unable to sync documents. Please check your connection.");
+      setIsLoading(false);
     });
 
     return () => unsubscribe();
@@ -52,6 +58,7 @@ export const useCloudHistory = (userId: string | undefined) => {
   const createSession = useCallback(async (text: string, title: string): Promise<CloudDocument | null> => {
     if (!userId) return null;
     try {
+      setError(null);
       // Mobile-safe ID generation
       const safeId = typeof crypto !== 'undefined' && crypto.randomUUID 
         ? crypto.randomUUID() 
@@ -64,6 +71,7 @@ export const useCloudHistory = (userId: string | undefined) => {
       return { id: docRef.id, ...newDocData } as CloudDocument;
     } catch (err) {
       console.error('Failed to create session:', err);
+      setError("Could not create a new document session.");
       return null;
     }
   }, [userId]);
@@ -71,6 +79,7 @@ export const useCloudHistory = (userId: string | undefined) => {
   const addToSession = useCallback(async (sessionId: string, text: string) => {
     if (!userId) return;
     try {
+      setError(null);
       const newBlock = { id: crypto.randomUUID(), text, timestamp: Date.now() };
       const documentRef = doc(db, 'users', userId, 'documents', sessionId);
       await updateDoc(documentRef, {
@@ -79,27 +88,32 @@ export const useCloudHistory = (userId: string | undefined) => {
       });
     } catch (err) {
       console.error('Failed to add to session:', err);
+      setError("Failed to save text to the cloud session.");
     }
   }, [userId]);
 
   const deleteExtraction = useCallback(async (documentId: string) => {
     if (!userId) return;
     try {
+      setError(null);
       await deleteDoc(doc(db, 'users', userId, 'documents', documentId));
     } catch (err) {
       console.error('Failed to delete:', err);
+      setError("Failed to delete the document.");
     }
   }, [userId]);
 
   const renameSession = useCallback(async (sessionId: string, newTitle: string) => {
     if (!userId || !newTitle.trim()) return;
     try {
+      setError(null);
       const documentRef = doc(db, 'users', userId, 'documents', sessionId);
       await updateDoc(documentRef, { title: newTitle.trim() });
     } catch (err) {
       console.error('Failed to rename:', err);
+      setError("Failed to rename the document.");
     }
   }, [userId]);
 
-  return { documents, isLoading, createSession, addToSession, deleteExtraction, renameSession };
+  return { documents, isLoading, error, createSession, addToSession, deleteExtraction, renameSession };
 };

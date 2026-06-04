@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
-import { OcrWorkspace } from '../features/ocr/components/OcrWorkspace';
 import { WorkspaceProvider } from '../shared/context/WorkspaceContext';
 import { LandingPage } from '../pages/LandingPage';
+
+const OcrWorkspace = lazy(() => import('../features/ocr/components/OcrWorkspace').then(module => ({ default: module.OcrWorkspace })));
 
 function App() {
   return (
@@ -26,7 +27,13 @@ function App() {
                 </div>
                 
                 <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-[#4D694E]/10">
-                  <OcrWorkspace />
+                  <Suspense fallback={
+                    <div className="h-[600px] w-full animate-pulse bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-center">
+                      <span className="text-[#4D694E]/50 font-medium">Loading workspace...</span>
+                    </div>
+                  }>
+                    <OcrWorkspace />
+                  </Suspense>
                 </div>
               </div>
             </DashboardLayout>
