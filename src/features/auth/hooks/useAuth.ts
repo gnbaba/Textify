@@ -16,13 +16,15 @@ import { auth } from '../../../config/firebase';
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const checkRedirect = async () => {
       try {
         await getRedirectResult(auth);
-      } catch (error) {
-        console.error("Failed to process redirect login:", error);
+      } catch (err) {
+        console.error("Failed to process redirect login:", err);
+        setError("Authentication failed. Please try again.");
       }
     };
     
@@ -39,6 +41,7 @@ export const useAuth = () => {
   // Added rememberMe parameter with default to true
   const loginWithGoogle = async (rememberMe: boolean = true) => {
     try {
+      setError(null);
       // Set persistence based on the user's "Remember Me" choice
       const persistenceType = rememberMe ? browserLocalPersistence : browserSessionPersistence;
       await setPersistence(auth, persistenceType);
@@ -58,18 +61,21 @@ export const useAuth = () => {
         // Safe for desktop: Opens the standard popup window
         await signInWithPopup(auth, provider);
       }
-    } catch (error) {
-      console.error("Failed to log in with Google:", error);
+    } catch (err) {
+      console.error("Failed to log in with Google:", err);
+      setError("Login was cancelled or encountered an error. Please try again.");
     }
   };
 
   const logout = async () => {
     try {
+      setError(null);
       await signOut(auth);
-    } catch (error) {
-      console.error("Failed to log out:", error);
+    } catch (err) {
+      console.error("Failed to log out:", err);
+      setError("Failed to sign out. Please check your connection.");
     }
   };
 
-  return { user, isAuthLoading, loginWithGoogle, logout };
+  return { user, isAuthLoading, error, loginWithGoogle, logout };
 };
