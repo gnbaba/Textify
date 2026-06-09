@@ -39,6 +39,9 @@ class TesseractOcrService implements IOcrService {
     try {
       const worker = await createWorker('eng', 1, {
         logger: this.handleLog,
+        workerPath: '/ocr-assets/worker.min.js',
+        corePath: '/ocr-assets',
+        langPath: '/ocr-assets',
       });
       
       this.worker = worker;
