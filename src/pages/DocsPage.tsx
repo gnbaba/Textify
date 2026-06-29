@@ -9,7 +9,6 @@ import {
   GithubLogo,
   CaretRight,
   Sparkle,
-  LockKey,
   FolderSimple,
 } from '@phosphor-icons/react';
 

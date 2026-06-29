@@ -10,9 +10,6 @@ import {
   Lightning,
   ArrowRight,
   LockKey,
-  ShieldCheck,
-  EnvelopeSimple,
-  ArrowUpRight,
   CheckCircle,
   ArrowUp,
   X,
@@ -643,7 +640,6 @@ export const LandingPage = () => {
   );
 
   const marqueeText = MARQUEE_ITEMS.map((t) => t + '  ///  ').join('');
-  const doubledMarquee = marqueeText + marqueeText;
 
   return (
     <main className="overflow-x-hidden w-full max-w-full relative min-h-[100dvh] bg-[#FFF3D5] text-[#4D694E] selection:bg-[#4D694E] selection:text-[#FFF3D5]">
@@ -1155,7 +1151,7 @@ export const LandingPage = () => {
         </div>
 
         <div className="pricing-grid grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl" style={{ perspective: '800px' }}>
-          {PRICING_TIERS.map((tier, idx) => (
+          {PRICING_TIERS.map((tier) => (
             <div
               key={tier.ref}
               className={`pricing-card p-6 md:p-8 border-2 border-[#4D694E] flex flex-col justify-between min-h-[300px] relative will-change-transform transition-all duration-300 hover:-translate-y-1 hover:-translate-x-1 ${
@@ -1608,7 +1604,7 @@ export const LandingPage = () => {
                         <button
                           key={rating.id}
                           type="button"
-                          onClick={() => setFeedbackRating(rating.id as any)}
+                          onClick={() => setFeedbackRating(rating.id as 'awesome' | 'good' | 'work')}
                           className={`py-2 border-2 text-[8px] font-mono-industrial font-bold uppercase transition-all ${
                             feedbackRating === rating.id
                               ? 'bg-[#4D694E] text-[#FFF3D5] border-[#4D694E]'

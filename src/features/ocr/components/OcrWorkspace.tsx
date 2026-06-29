@@ -13,7 +13,7 @@ import { DndContext, DragEndEvent, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { SortableBlock } from './SortableBlock';
 import { ExportModal } from './ExportModal';
-import { Sparkle, CloudArrowUp, ListBullets, Copy, Warning, X, LockKey, Lightning, FileText, ArrowRight } from '@phosphor-icons/react';
+import { Warning, X, LockKey, Lightning, FileText } from '@phosphor-icons/react';
 
 // Compresses image and applies fallback canvas to prevent mobile memory crashes
 const compressImage = async (file: File): Promise<File> => {

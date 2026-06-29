@@ -6,12 +6,9 @@ import {
   CaretLeft, 
   Plus, 
   Trash, 
-  PencilSimple, 
   SignOut, 
   List, 
   DotsThreeVertical, 
-  LockKey,
-  CaretRight,
   X,
   PushPin
 } from '@phosphor-icons/react';

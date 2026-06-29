@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Trash, Copy, Check, List, DotsSixVertical } from '@phosphor-icons/react';
+import { Trash, Copy, Check, DotsSixVertical } from '@phosphor-icons/react';
 
 export interface SortableBlockProps {
   id: string;
