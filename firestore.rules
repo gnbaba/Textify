@@ -5,10 +5,12 @@ service cloud.firestore {
     match /users/{userId}/documents/{documentId} {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow write: if request.auth != null && request.auth.uid == userId
-                   && request.resource.data.keys().hasOnly(['title', 'timestamp', 'blocks'])
+                   && request.resource.data.keys().hasOnly(['title', 'timestamp', 'blocks', 'isPinned', 'pinnedAt'])
                    && (!request.resource.data.keys().hasAny(['title']) || request.resource.data.title is string)
                    && (!request.resource.data.keys().hasAny(['timestamp']) || request.resource.data.timestamp is number)
-                   && (!request.resource.data.keys().hasAny(['blocks']) || request.resource.data.blocks is list);
+                   && (!request.resource.data.keys().hasAny(['blocks']) || request.resource.data.blocks is list)
+                   && (!request.resource.data.keys().hasAny(['isPinned']) || request.resource.data.isPinned is bool)
+                   && (!request.resource.data.keys().hasAny(['pinnedAt']) || request.resource.data.pinnedAt == null || request.resource.data.pinnedAt is number);
     }
   }
 }

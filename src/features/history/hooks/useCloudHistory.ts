@@ -13,6 +13,8 @@ export interface CloudDocument {
   title: string;
   blocks: ExtractionBlock[];
   timestamp: number;
+  isPinned?: boolean;
+  pinnedAt?: number;
 }
 
 export const useCloudHistory = (userId: string | undefined) => {
@@ -41,8 +43,25 @@ export const useCloudHistory = (userId: string | undefined) => {
           title: typeof data.title === 'string' ? data.title : 'Untitled',
           blocks: Array.isArray(data.blocks) ? data.blocks : legacyBlocks,
           timestamp: typeof data.timestamp === 'number' ? data.timestamp : 0,
+          isPinned: typeof data.isPinned === 'boolean' ? data.isPinned : false,
+          pinnedAt: typeof data.pinnedAt === 'number' ? data.pinnedAt : 0,
         };
       });
+
+      // Sort: pinned first (ascending by pinnedAt), then unpinned (descending by timestamp)
+      fetchedDocs.sort((a, b) => {
+        const aPinned = a.isPinned || false;
+        const bPinned = b.isPinned || false;
+        if (aPinned && !bPinned) return -1;
+        if (!aPinned && bPinned) return 1;
+        if (aPinned && bPinned) {
+          const aPinnedAt = a.pinnedAt || 0;
+          const bPinnedAt = b.pinnedAt || 0;
+          return aPinnedAt - bPinnedAt; // ascending: first pin at top (priority)
+        }
+        return b.timestamp - a.timestamp; // descending: newest unpinned at top
+      });
+
       setDocuments(fetchedDocs);
       setIsLoading(false);
       setError(null);
@@ -115,5 +134,21 @@ export const useCloudHistory = (userId: string | undefined) => {
     }
   }, [userId]);
 
-  return { documents, isLoading, error, createSession, addToSession, deleteExtraction, renameSession };
+  const togglePinSession = useCallback(async (sessionId: string, currentPinnedStatus: boolean) => {
+    if (!userId) return;
+    try {
+      setError(null);
+      const documentRef = doc(db, 'users', userId, 'documents', sessionId);
+      const nextPinned = !currentPinnedStatus;
+      await updateDoc(documentRef, { 
+        isPinned: nextPinned,
+        pinnedAt: nextPinned ? Date.now() : null
+      });
+    } catch (err) {
+      console.error('Failed to toggle pin:', err);
+      setError("Failed to update pinned status.");
+    }
+  }, [userId]);
+
+  return { documents, isLoading, error, createSession, addToSession, deleteExtraction, renameSession, togglePinSession };
 };

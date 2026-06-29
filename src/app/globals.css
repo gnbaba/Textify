@@ -1,3 +1,149 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html, body {
+    background-color: #FFF3D5;
+    overscroll-behavior-y: none;
+  }
+  body {
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+}
+
+/* Monospace utility class for telemetry text */
+.font-mono-industrial {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #FFF3D5;
+}
+::-webkit-scrollbar-thumb {
+  background: #4D694E;
+  border-radius: 0;
+}
+
+/* Mechanical noise grain overlay */
+.noise-bg {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+}
+
+/* Halftone dot pattern overlay (Swiss Industrial Print) */
+.halftone-overlay {
+  background-image: radial-gradient(circle, rgba(77, 105, 78, 0.06) 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+
+/* Scanline effect for inverted blocks */
+.scanlines {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(255, 243, 213, 0.04) 2px,
+    rgba(255, 243, 213, 0.04) 4px
+  );
+}
+
+/* Marquee for the industrial ticker */
+@keyframes marquee-industrial {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Scan sweep for mockup */
+@keyframes scan-sweep {
+  0% { top: 0%; opacity: 1; }
+  80% { top: 92%; opacity: 0.6; }
+  100% { top: 0%; opacity: 0; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   GSAP ANIMATION SUPPORT
+   ═══════════════════════════════════════════════════════ */
+
+/* GPU-accelerated transforms for animated elements */
+.will-change-transform {
+  will-change: transform, opacity;
+}
+
+/* Border-expand hover effect for outline CTA buttons */
+.btn-border-expand {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-border-expand::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #4D694E;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: -1;
+}
+
+.btn-border-expand:hover::after {
+  transform: scaleX(1);
+}
+
+.btn-border-expand:hover {
+  color: #FFF3D5;
+}
+
+/* Gentle CTA pulse keyframe */
+@keyframes cta-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+/* Floating geometric shapes in hero */
+.hero-geo-shape {
+  position: absolute;
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* Magnetic button reset — prevents jank on rapid mouse leave */
+.btn-magnetic {
+  will-change: transform;
+}
+
+/* Terminal typing cursor blink */
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Floating animations for industrial telemetry background items */
+@keyframes telemetry-float-slow {
+  0% { transform: translate(0px, 0px) rotate(0deg); }
+  33% { transform: translate(25px, -35px) rotate(0.5deg); }
+  66% { transform: translate(-15px, 20px) rotate(-0.5deg); }
+  100% { transform: translate(0px, 0px) rotate(0deg); }
+}
+
+@keyframes telemetry-float-medium {
+  0% { transform: translate(0px, 0px) rotate(0deg); }
+  33% { transform: translate(-30px, 25px) rotate(-0.8deg); }
+  66% { transform: translate(20px, -30px) rotate(0.8deg); }
+  100% { transform: translate(0px, 0px) rotate(0deg); }
+}
+
+.animate-telemetry-slow {
+  animation: telemetry-float-slow 28s ease-in-out infinite;
+}
+
+.animate-telemetry-medium {
+  animation: telemetry-float-medium 22s ease-in-out infinite;
+}
