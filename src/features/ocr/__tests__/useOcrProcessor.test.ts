@@ -43,6 +43,7 @@ describe('useOcrProcessor', () => {
     expect(mockOcrService.extractText).toHaveBeenCalledWith(
       mockFile, 
       'document', 
+      undefined,
       expect.any(Function)
     );
     expect(mockOcrService.extractText).toHaveBeenCalledTimes(1);

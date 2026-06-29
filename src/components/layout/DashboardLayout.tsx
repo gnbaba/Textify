@@ -297,21 +297,32 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
       {/* Main Container */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
         {/* Top Header Bar */}
-        <header className="h-16 flex items-center px-4 md:px-6 z-10 border-b-2 border-[#4D694E]">
-          {!isSidebarOpen && (
-            <button 
-              onClick={() => setIsSidebarOpen(true)} 
-              className="p-1.5 border-2 border-[#4D694E] hover:bg-[#4D694E]/10 text-[#4D694E] transition-colors flex items-center justify-center gap-1.5 mr-4"
-              aria-label="Expand Sidebar"
+        <header className="h-16 flex items-center px-4 md:px-6 z-10 border-b-2 border-[#4D694E] justify-between">
+          <div className="flex items-center flex-1">
+            {!isSidebarOpen && (
+              <button 
+                onClick={() => setIsSidebarOpen(true)} 
+                className="p-1.5 border-2 border-[#4D694E] hover:bg-[#4D694E]/10 text-[#4D694E] transition-colors flex items-center justify-center gap-1.5 mr-4"
+                aria-label="Expand Sidebar"
+              >
+                <List className="w-4 h-4" weight="bold" />
+                <span className="font-mono-industrial text-[9px] font-bold tracking-[0.1em] uppercase md:block hidden">INDEX</span>
+              </button>
+            )}
+            <div className="flex items-center gap-2 font-mono-industrial text-[10px] font-bold">
+              <span className="text-[#4D694E]/30">&lt;&lt;&lt;</span>
+              <span className="uppercase tracking-widest text-[#4D694E]/60">WORKSPACE PROTOCOL ACTIVE</span>
+              <span className="text-[#4D694E]/30">&gt;&gt;&gt;</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center shrink-0">
+            <a 
+              href="/"
+              className="font-mono-industrial text-[9px] font-bold tracking-[0.1em] uppercase bg-[#FFF3D5] hover:bg-[#4D694E] hover:text-[#FFF3D5] border-2 border-[#4D694E] px-3.5 py-1.5 transition-all shadow-[2px_2px_0px_0px_#4D694E] hover:shadow-none active:translate-y-0.5 active:translate-x-0.5 relative z-10"
             >
-              <List className="w-4 h-4" weight="bold" />
-              <span className="font-mono-industrial text-[9px] font-bold tracking-[0.1em] uppercase md:block hidden">INDEX</span>
-            </button>
-          )}
-          <div className="flex-1 flex items-center gap-2 font-mono-industrial text-[10px] font-bold">
-            <span className="text-[#4D694E]/30">&lt;&lt;&lt;</span>
-            <span className="uppercase tracking-widest text-[#4D694E]/60">WORKSPACE PROTOCOL ACTIVE</span>
-            <span className="text-[#4D694E]/30">&gt;&gt;&gt;</span>
+              [ ← EXIT WORKSPACE ]
+            </a>
           </div>
         </header>
 

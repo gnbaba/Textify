@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ImageDropzone } from './ImageDropzone';
 import { useOcrProcessor } from '../hooks/useOcrProcessor';
-import { tesseractOcrService } from '../services/tesseractOcrService';
+import { routingOcrService } from '../services/routingOcrService';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { useCloudHistory, ExtractionBlock } from '../../history/hooks/useCloudHistory';
 import { useWorkspace } from '../../../shared/context/WorkspaceContext';
 import type { ExtractionMode } from '../types/ocrTypes';
+import { OpenCVPreprocessorService } from '../services/opencvPreprocessorService';
 import { doc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { LoginModal } from '../../auth/components/LoginModal';
@@ -50,14 +51,6 @@ const compressImage = async (file: File): Promise<File> => {
           ctx.fillStyle = '#FFFFFF';
           ctx.fillRect(0, 0, width, height);
 
-          if ('filter' in ctx) {
-            try {
-              ctx.filter = 'grayscale(100%) brightness(80%) contrast(200%)';
-            } catch (e) {
-              console.warn("Canvas filter gracefully skipped:", e);
-            }
-          }
-
           ctx.drawImage(img, 0, 0, width, height);
         }
         
@@ -71,7 +64,7 @@ const compressImage = async (file: File): Promise<File> => {
           } else {
             resolve(file); 
           }
-        }, 'image/jpeg', 0.8); 
+        }, 'image/jpeg', 0.95); 
       };
       img.onerror = () => resolve(file);
     };
@@ -82,7 +75,7 @@ const compressImage = async (file: File): Promise<File> => {
 export const OcrWorkspace: React.FC = () => {
   const { user } = useAuth();
   const { documents, createSession, addToSession } = useCloudHistory(user?.uid);
-  const { status, text, progress, process, error } = useOcrProcessor(tesseractOcrService);
+  const { status, text, progress, process, error } = useOcrProcessor(routingOcrService);
   const { activeDocument, setActiveDocument } = useWorkspace();
   
   const displayDocument = user ? (activeDocument ? documents.find(d => d.id === activeDocument.id) || null : null) : activeDocument;
@@ -90,6 +83,269 @@ export const OcrWorkspace: React.FC = () => {
   const [mode, setMode] = useState<ExtractionMode>('document');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const lastSavedTextRef = useRef<string | null>(null);
+
+  // Preprocessing and Crop Editor states
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [activeImageSrc, setActiveImageSrc] = useState<string | null>(null);
+  const [cropBox, setCropBox] = useState({ x: 10, y: 10, w: 80, h: 80 });
+  const [dragState, setDragState] = useState<{
+    isDragging: boolean;
+    dragType: 'move' | 'nw' | 'ne' | 'se' | 'sw' | null;
+    startX: number;
+    startY: number;
+    startCrop: { x: number; y: number; w: number; h: number };
+  } | null>(null);
+
+  const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const sourceImgRef = useRef<HTMLImageElement | null>(null);
+
+  const handleCropMouseDown = (e: React.MouseEvent, type: 'move' | 'nw' | 'ne' | 'se' | 'sw') => {
+    e.preventDefault();
+    if (!sourceImgRef.current) return;
+
+    setDragState({
+      isDragging: true,
+      dragType: type,
+      startX: e.clientX,
+      startY: e.clientY,
+      startCrop: { ...cropBox },
+    });
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!dragState || !dragState.isDragging || !sourceImgRef.current) return;
+
+      const imgRect = sourceImgRef.current.getBoundingClientRect();
+      const dx = ((e.clientX - dragState.startX) / imgRect.width) * 100;
+      const dy = ((e.clientY - dragState.startY) / imgRect.height) * 100;
+
+      let { x, y, w, h } = dragState.startCrop;
+
+      if (dragState.dragType === 'move') {
+        x = Math.max(0, Math.min(100 - w, x + dx));
+        y = Math.max(0, Math.min(100 - h, y + dy));
+      } else if (dragState.dragType === 'nw') {
+        const newX = Math.max(0, Math.min(x + w - 5, x + dx));
+        const newW = w - (newX - x);
+        const newY = Math.max(0, Math.min(y + h - 5, y + dy));
+        const newH = h - (newY - y);
+        x = newX;
+        w = newW;
+        y = newY;
+        h = newH;
+      } else if (dragState.dragType === 'ne') {
+        w = Math.max(5, Math.min(100 - x, w + dx));
+        const newY = Math.max(0, Math.min(y + h - 5, y + dy));
+        const newH = h - (newY - y);
+        y = newY;
+        h = newH;
+      } else if (dragState.dragType === 'se') {
+        w = Math.max(5, Math.min(100 - x, w + dx));
+        h = Math.max(5, Math.min(100 - y, h + dy));
+      } else if (dragState.dragType === 'sw') {
+        const newX = Math.max(0, Math.min(x + w - 5, x + dx));
+        const newW = w - (newX - x);
+        x = newX;
+        w = newW;
+        h = Math.max(5, Math.min(100 - y, h + dy));
+      }
+
+      setCropBox({ x, y, w, h });
+    };
+
+    const handleMouseUp = () => {
+      setDragState(null);
+    };
+
+    if (dragState?.isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [dragState]);
+
+  // Real-time canvas telemetry rendering
+  useEffect(() => {
+    if (!activeImageSrc || !previewCanvasRef.current || !sourceImgRef.current) return;
+
+    const img = sourceImgRef.current;
+    const canvas = previewCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const updateCanvas = () => {
+      if (!img.naturalWidth || !img.naturalHeight) return;
+
+      const x = (cropBox.x / 100) * img.naturalWidth;
+      const y = (cropBox.y / 100) * img.naturalHeight;
+      const w = (cropBox.w / 100) * img.naturalWidth;
+      const h = (cropBox.h / 100) * img.naturalHeight;
+
+      canvas.width = w;
+      canvas.height = h;
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, w, h);
+
+      if (mode === 'graphic') {
+        ctx.filter = 'none';
+        ctx.drawImage(img, x, y, w, h, 0, 0, w, h);
+        return;
+      }
+
+      const cv = window.cv;
+      if (cv && cv.Mat) {
+        try {
+          ctx.filter = 'none';
+          ctx.drawImage(img, x, y, w, h, 0, 0, w, h);
+          OpenCVPreprocessorService.preprocess(canvas, {
+            preset: 'document',
+            brightness: 80,
+            contrast: 200,
+            thresholdMode: 'adaptive',
+            deskew: true
+          });
+        } catch (err) {
+          console.error('OpenCV preview generation failed:', err);
+        }
+      } else {
+        // CSS Canvas Filter Fallback
+        if ('filter' in ctx) {
+          try {
+            ctx.filter = 'grayscale(100%) brightness(80%) contrast(200%)';
+          } catch (e) {
+            console.warn('Canvas preview filter failed:', e);
+          }
+        }
+        ctx.drawImage(img, x, y, w, h, 0, 0, w, h);
+      }
+    };
+
+    if (img.complete) {
+      updateCanvas();
+    } else {
+      img.onload = updateCanvas;
+    }
+  }, [
+    activeImageSrc,
+    cropBox,
+    mode
+  ]);
+
+  const handleImageSelected = (file: File) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      alert("Invalid file type. Please upload a JPG, PNG, or WEBP image.");
+      return; 
+    }
+
+    const maxSizeInBytes = 10 * 1024 * 1024; 
+    if (file.size > maxSizeInBytes) {
+      alert("File is too large. Please keep images under 10MB.");
+      return; 
+    }
+
+    setSelectedFile(file);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setActiveImageSrc(event.target?.result as string);
+      setCropBox({ x: 10, y: 10, w: 80, h: 80 });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRunOcr = async () => {
+    if (!selectedFile || !activeImageSrc || !sourceImgRef.current) return;
+
+    if (status === 'loading' || isPreparing || isProcessing) {
+      setSpamWarning(true);
+      setTimeout(() => setSpamWarning(false), 2500);
+      return;
+    }
+
+    setIsPreparing(true);
+    setIsProcessing(true);
+    lastSavedTextRef.current = '';
+
+    if (!user) {
+      checkAndResetCooldown();
+      const currentScans = parseInt(localStorage.getItem('textify_guest_scans') || '0', 10);
+      
+      if (currentScans >= 10) {
+        setShowLimitModal(true);
+        setIsPreparing(false);
+        setIsProcessing(false);
+        return; 
+      }
+      
+      const newCount = currentScans + 1;
+      localStorage.setItem('textify_guest_scans', newCount.toString());
+      setGuestScansCount(newCount);
+
+      if (newCount === 10) {
+        localStorage.setItem('textify_exhausted_date', Date.now().toString());
+      }
+    }
+
+    try {
+      // 1. Crop image onto canvas
+      const img = sourceImgRef.current;
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Failed to get canvas 2D context for cropping.');
+
+      const x = (cropBox.x / 100) * img.naturalWidth;
+      const y = (cropBox.y / 100) * img.naturalHeight;
+      const w = (cropBox.w / 100) * img.naturalWidth;
+      const h = (cropBox.h / 100) * img.naturalHeight;
+
+      canvas.width = w;
+      canvas.height = h;
+      ctx.drawImage(img, x, y, w, h, 0, 0, w, h);
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          alert('Failed to generate cropped image.');
+          setIsPreparing(false);
+          setIsProcessing(false);
+          return;
+        }
+
+        const croppedFile = new File([blob], selectedFile.name, {
+          type: 'image/jpeg',
+          lastModified: Date.now(),
+        });
+
+        try {
+          const safeFile = await compressImage(croppedFile);
+          await process(safeFile, mode);
+          setActiveImageSrc(null);
+          setSelectedFile(null);
+        } catch (error) {
+          console.error("Processing error:", error);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          alert(`OCR FAILED: ${errorMessage}`);
+        } finally {
+          setIsPreparing(false);
+          setTimeout(() => {
+            setIsProcessing(false);
+          }, 3000);
+        }
+      }, 'image/jpeg', 0.95);
+
+    } catch (error) {
+      console.error('Cropping and processing failed:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      alert(`OCR FAILED: ${errorMessage}`);
+      setIsPreparing(false);
+      setIsProcessing(false);
+    }
+  };
 
   const [blockToDelete, setBlockToDelete] = useState<ExtractionBlock | null>(null);
   const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([]);
@@ -283,63 +539,7 @@ export const OcrWorkspace: React.FC = () => {
     }
   };
 
-  const handleProcessImage = async (file: File) => {
-    if (status === 'loading' || isPreparing || isProcessing) {
-      setSpamWarning(true);
-      setTimeout(() => setSpamWarning(false), 2500);
-      return;
-    }
 
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      alert("Invalid file type. Please upload a JPG, PNG, or WEBP image.");
-      return; 
-    }
-
-    const maxSizeInBytes = 10 * 1024 * 1024; 
-    if (file.size > maxSizeInBytes) {
-      alert("File is too large. Please keep images under 5MB.");
-      return; 
-    }
-    
-    setIsPreparing(true);
-    setIsProcessing(true);
-    lastSavedTextRef.current = '';
-
-    if (!user) {
-      checkAndResetCooldown();
-      const currentScans = parseInt(localStorage.getItem('textify_guest_scans') || '0', 10);
-      
-      if (currentScans >= 10) {
-        setShowLimitModal(true);
-        setIsPreparing(false);
-        setIsProcessing(false);
-        return; 
-      }
-      
-      const newCount = currentScans + 1;
-      localStorage.setItem('textify_guest_scans', newCount.toString());
-      setGuestScansCount(newCount);
-
-      if (newCount === 10) {
-        localStorage.setItem('textify_exhausted_date', Date.now().toString());
-      }
-    }
-
-    try {
-      const safeFile = await compressImage(file);
-      await process(safeFile, mode);
-    } catch (error) {
-      console.error("Processing error:", error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      alert(`OCR FAILED: ${errorMessage}`);
-    } finally {
-      setIsPreparing(false);
-      setTimeout(() => {
-        setIsProcessing(false);
-      }, 3000);
-    }
-  };
 
   // Modern Neo-Brutalist telemetry diagnostics bootsplash
   if (showSplash) {
@@ -406,10 +606,95 @@ export const OcrWorkspace: React.FC = () => {
           </div>
         )}
 
-        {/* Dropzone Wrapper */}
-        <div className={isProcessing ? 'opacity-50 pointer-events-none' : ''}>
-          <ImageDropzone onImageCaptured={handleProcessImage} />
-        </div>
+        {/* Preprocessing Crop Editor OR Dropzone */}
+        {activeImageSrc ? (
+          <div className="border-2 border-[#4D694E] bg-white p-4 font-mono-industrial mb-6 shadow-[4px_4px_0px_0px_#4D694E]">
+            <h3 className="text-xs font-black uppercase tracking-wider mb-4 border-b border-[#4D694E]/20 pb-2">
+              [ EXTRACTION ENGINE PREPROCESSING CONTROL ]
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              {/* Left Column: Image Cropper */}
+              <div className="space-y-3">
+                <span className="text-[10px] font-bold tracking-widest text-[#4D694E]/60 uppercase">
+                  RAW INPUT VIEW (DRAG HANDLES TO CROP)
+                </span>
+                <div className="relative border-2 border-[#4D694E] bg-black/5 overflow-hidden flex items-center justify-center select-none" style={{ maxHeight: '350px' }}>
+                  <img
+                    ref={sourceImgRef}
+                    src={activeImageSrc}
+                    alt="Source Crop"
+                    className="max-w-full max-h-[350px] object-contain pointer-events-none"
+                    onLoad={() => {
+                      // Trigger a render update once image is loaded
+                      setCropBox(prev => ({ ...prev }));
+                    }}
+                  />
+                  {/* Cropping box overlay */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: `${cropBox.x}%`,
+                      top: `${cropBox.y}%`,
+                      width: `${cropBox.w}%`,
+                      height: `${cropBox.h}%`,
+                      border: '2px dashed #4D694E',
+                      boxShadow: '0 0 0 9999px rgba(77, 105, 78, 0.3)',
+                    }}
+                    className="cursor-move"
+                    onMouseDown={(e) => handleCropMouseDown(e, 'move')}
+                  >
+                    {/* Handles */}
+                    <div className="absolute -top-1.5 -left-1.5 w-3 h-3 bg-[#FFF3D5] border-2 border-[#4D694E] cursor-nwse-resize" onMouseDown={(e) => { e.stopPropagation(); handleCropMouseDown(e, 'nw'); }} />
+                    <div className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-[#FFF3D5] border-2 border-[#4D694E] cursor-nesw-resize" onMouseDown={(e) => { e.stopPropagation(); handleCropMouseDown(e, 'ne'); }} />
+                    <div className="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-[#FFF3D5] border-2 border-[#4D694E] cursor-nesw-resize" onMouseDown={(e) => { e.stopPropagation(); handleCropMouseDown(e, 'sw'); }} />
+                    <div className="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-[#FFF3D5] border-2 border-[#4D694E] cursor-nwse-resize" onMouseDown={(e) => { e.stopPropagation(); handleCropMouseDown(e, 'se'); }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Preprocessed Live Telemetry Preview */}
+              <div className="space-y-3">
+                <span className="text-[10px] font-bold tracking-widest text-[#4D694E]/60 uppercase">
+                  OCR LIVE ENGINE INPUT PREVIEW
+                </span>
+                <div className="border-2 border-[#4D694E] bg-white flex items-center justify-center p-2 h-[350px] overflow-auto">
+                  <canvas
+                    ref={previewCanvasRef}
+                    className="max-w-full max-h-full object-contain"
+                  />
+                </div>
+              </div>
+            </div>
+
+
+
+            {/* Actions Bar */}
+            <div className="flex justify-end gap-3 border-t border-[#4D694E]/20 pt-4 font-bold text-[10px] uppercase">
+              <button
+                onClick={() => {
+                  setActiveImageSrc(null);
+                  setSelectedFile(null);
+                }}
+                disabled={isProcessing}
+                className="px-5 py-2.5 border border-[#4D694E]/30 hover:border-[#4D694E] transition-colors"
+              >
+                [ DISCARD / CANCEL ]
+              </button>
+              <button
+                onClick={handleRunOcr}
+                disabled={isProcessing}
+                className="bg-[#4D694E] text-[#FFF3D5] px-6 py-2.5 border-2 border-[#4D694E] hover:bg-[#3a4f3b] transition-all flex items-center gap-2 shadow-[2px_2px_0px_0px_rgba(77,105,78,0.4)]"
+              >
+                [ RUN EXTRACTION PROTOCOL ]
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className={isProcessing ? 'opacity-50 pointer-events-none' : ''}>
+            <ImageDropzone onImageCaptured={handleImageSelected} />
+          </div>
+        )}
 
         {!user && (
           <div className="text-center mt-2">
