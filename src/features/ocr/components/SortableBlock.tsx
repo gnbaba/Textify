@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Trash, Copy, Check, List, DotsSixVertical } from '@phosphor-icons/react';
 
 export interface SortableBlockProps {
   id: string;
@@ -40,20 +41,19 @@ export const SortableBlock: React.FC<SortableBlockProps> = ({
     <div
       ref={setNodeRef}
       style={style}
-      // Highlight the card with a green border if selected
-      className={`bg-white rounded-xl border-2 shadow-sm overflow-hidden mb-6 transition-colors ${
-        isSelected ? 'border-[#4D694E]' : 'border-transparent ring-1 ring-[#4D694E]/20'
+      className={`bg-[#FFF3D5] border-2 border-[#4D694E] overflow-hidden mb-6 font-mono-industrial transition-shadow duration-300 ${
+        isSelected ? 'shadow-[6px_6px_0px_0px_#4D694E]' : 'shadow-none'
       }`}
     >
       <div className="flex">
+        {/* Grab Handle */}
         <div
           {...attributes}
           {...listeners}
-          className="flex items-center justify-center px-3 cursor-grab active:cursor-grabbing bg-[#FFF3D5] border-r border-[#4D694E]/20"
+          className="flex items-center justify-center px-3 cursor-grab active:cursor-grabbing bg-[#FFF3D5] border-r-2 border-[#4D694E] hover:bg-[#4D694E]/10"
+          title="Drag to reorder"
         >
-          <svg className="w-4 h-4 text-[#4D694E]/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9h.01M8 15h.01M12 9h.01M12 15h.01M16 9h.01M16 15h.01" />
-          </svg>
+          <DotsSixVertical className="w-5 h-5 text-[#4D694E]" weight="bold" />
         </div>
 
         {/* Content */}
@@ -62,40 +62,43 @@ export const SortableBlock: React.FC<SortableBlockProps> = ({
             <textarea
               readOnly
               value={text}
-              className="w-full h-40 md:h-48 p-3 md:p-4 rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-[#4D694E] bg-[#FFF3D5]/30 border border-[#4D694E]/20 text-gray-800 font-mono text-xs md:text-sm leading-relaxed whitespace-pre-wrap break-words"
+              className="w-full h-40 md:h-48 p-4 resize-y focus:outline-none bg-[#FFF3D5]/20 border-2 border-[#4D694E] text-[#4D694E] font-mono text-xs md:text-sm leading-relaxed whitespace-pre-wrap break-words"
             />
           </div>
 
-          <div className="px-4 md:px-5 py-3 bg-gray-50/50 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+          <div className="px-4 md:px-5 py-3 bg-[#FFF3D5]/20 border-t-2 border-[#4D694E] flex flex-wrap justify-between items-center gap-3">
 
-            <label className="flex items-center gap-2 cursor-pointer group shrink-0">
-              <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-[#4D694E] border-[#4D694E]' : 'bg-white border-[#4D694E]/40 group-hover:border-[#4D694E]'}`}>
-                {isSelected && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+            {/* Selector Checkbox */}
+            <label className="flex items-center gap-2 cursor-pointer group select-none">
+              <div className={`w-5 h-5 border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-[#4D694E] border-[#4D694E]' : 'bg-[#FFF3D5] border-[#4D694E] group-hover:bg-[#4D694E]/10'}`}>
+                {isSelected && <Check className="w-3.5 h-3.5 text-[#FFF3D5]" weight="bold" />}
               </div>
               <input type="checkbox" checked={isSelected} onChange={onToggleSelect} className="hidden" />
-              <span className="text-sm font-bold text-[#4D694E] select-none">Select</span>
+              <span className="text-[10px] font-extrabold text-[#4D694E] tracking-wider uppercase">SELECT BLOCK</span>
             </label>
 
-            <div className="flex items-center gap-2 shrink-0 ml-auto">
+            {/* Utility Actions */}
+            <div className="flex items-center gap-2 shrink-0 ml-auto font-bold text-[9px] tracking-wide uppercase">
               <button
                 onClick={() => onDelete(id)}
-                className="text-red-500 hover:text-red-600 flex items-center justify-center gap-2 px-4 py-3 md:py-2 rounded-lg hover:bg-red-50 transition-colors font-semibold text-sm min-w-[44px]"
+                className="text-red-700 hover:text-white border-2 border-transparent hover:border-red-700 hover:bg-red-700 flex items-center justify-center gap-1 px-3 py-1.5 transition-colors"
                 type="button"
               >
-                <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                <span className="hidden md:inline">Delete</span>
+                <Trash className="w-3.5 h-3.5" weight="bold" />
+                <span>DELETE</span>
               </button>
 
               <button
                 onClick={() => onCopy(text, id)}
-                className={`px-6 py-3 md:py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center space-x-2 shadow-sm min-w-[120px] ${
-                  isCopied ? 'bg-[#4D694E] text-[#FFF3D5]' : 'bg-white border border-[#4D694E]/20 text-[#4D694E] hover:bg-[#4D694E]/5'
+                className={`px-4 py-1.5 border-2 border-[#4D694E] transition-all flex items-center justify-center gap-1 ${
+                  isCopied 
+                    ? 'bg-[#4D694E] text-[#FFF3D5]' 
+                    : 'bg-[#FFF3D5] text-[#4D694E] hover:bg-[#4D694E] hover:text-[#FFF3D5]'
                 }`}
                 type="button"
               >
-                <span>{isCopied ? 'Copied!' : 'Copy Text'}</span>
+                <Copy className="w-3.5 h-3.5" weight="bold" />
+                <span>{isCopied ? 'COPIED!' : 'COPY BLOCK'}</span>
               </button>
             </div>
           </div>
