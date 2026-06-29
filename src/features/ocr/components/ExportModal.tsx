@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import jsPDF from 'jspdf';
 import { ExtractionBlock } from '../../history/hooks/useCloudHistory';
+import { X, Copy, Download, Check } from '@phosphor-icons/react';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -22,10 +23,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Filter out unselected blocks, but maintain the dragged order!
   const finalBlocks = blocks.filter((block) => selectedIds.includes(block.id));
-  
-  // Stitch together with double newlines for readable spacing
   const combinedText = finalBlocks.map((b) => b.text).join('\n\n');
 
   const handleCopyText = async () => {
@@ -47,7 +45,6 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         format: 'a4',
       });
 
-      // Set up fonts and margins
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(16);
       doc.text(documentTitle || 'Textify Extraction', 20, 20);
@@ -55,21 +52,20 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(11);
 
-      // PDF formatting logic: Wrap text and handle multiple pages
       const pageHeight = doc.internal.pageSize.height;
       const margin = 20;
       const maxWidth = 170;
-      let cursorY = 35; // Start below the title
+      let cursorY = 35;
 
       const lines = doc.splitTextToSize(combinedText, maxWidth);
 
       for (let i = 0; i < lines.length; i++) {
         if (cursorY > pageHeight - margin) {
           doc.addPage();
-          cursorY = margin; // Reset Y back to the top
+          cursorY = margin;
         }
         doc.text(lines[i], margin, cursorY);
-        cursorY += 6; // Standard line height
+        cursorY += 6;
       }
 
       doc.save(`${documentTitle.replace(/\s+/g, '_')}_Textify.pdf`);
@@ -83,54 +79,63 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 px-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#4D694E]/40 px-4 font-mono-industrial text-[#4D694E]">
+      <div className="bg-[#FFF3D5] w-full max-w-2xl border-2 border-[#4D694E] flex flex-col max-h-[90vh] overflow-hidden">
         
         {/* Header */}
-        <div className="px-6 py-4 border-b border-[#4D694E]/10 flex justify-between items-center bg-gray-50">
-          <h3 className="text-xl font-extrabold text-[#4D694E]">Export Document</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-200 transition">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        <div className="px-6 py-3 border-b-2 border-[#4D694E] flex justify-between items-center bg-[#4D694E] text-[#FFF3D5]">
+          <h3 className="text-xs font-black uppercase tracking-[0.15em]">&lt; EXPORT DOCUMENT PROTOCOL &gt;</h3>
+          <button onClick={onClose} className="text-[#FFF3D5]/80 hover:text-white transition">
+            <X className="w-4 h-4" weight="bold" />
           </button>
         </div>
 
         {/* Preview Area */}
-        <div className="p-6 overflow-y-auto flex-1 bg-gray-100/50">
-          <label className="block text-xs font-bold text-[#4D694E] uppercase tracking-wider mb-2">
-            Document Preview ({finalBlocks.length} Blocks Selected)
+        <div className="p-6 overflow-y-auto flex-1 bg-[#FFF3D5]/10">
+          <label className="block text-[9px] font-bold text-[#4D694E]/60 uppercase tracking-widest mb-2.5">
+            /// DOCUMENT PREVIEW ({finalBlocks.length} BLOCKS MOUNTED)
           </label>
-          <div className="w-full bg-white border border-[#4D694E]/20 rounded-xl p-5 shadow-inner min-h-[300px]">
+          <div className="w-full bg-[#FFF3D5] border-2 border-[#4D694E] p-5 min-h-[260px] shadow-[4px_4px_0px_0px_#4D694E]">
             {finalBlocks.length === 0 ? (
-              <p className="text-gray-400 text-center italic mt-10">No blocks selected. Close and select at least one block to export.</p>
-            ) : (
-              <p className="text-sm font-mono text-gray-800 whitespace-pre-wrap leading-relaxed">
-                {combinedText}
+              <p className="text-[#4D694E]/40 text-center italic text-xs uppercase tracking-wide mt-10">
+                [ NO BLOCKS SELECTED. SELECT BLOCKS IN THE WORKSPACE BEFORE INITIATING EXPORT ]
               </p>
+            ) : (
+              <pre className="text-xs font-mono text-[#4D694E] whitespace-pre-wrap leading-relaxed">
+                {combinedText}
+              </pre>
             )}
           </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 py-4 border-t border-[#4D694E]/10 flex flex-col md:flex-row justify-between items-center gap-3 bg-white">
+        <div className="px-6 py-4 border-t-2 border-[#4D694E] flex flex-col md:flex-row justify-between items-center gap-3 bg-[#FFF3D5] font-bold text-[9px] tracking-wide uppercase">
           <button 
             onClick={handleCopyText} 
             disabled={finalBlocks.length === 0}
-            className="w-full md:w-auto px-5 py-2.5 rounded-xl font-bold text-sm text-[#4D694E] bg-[#4D694E]/10 hover:bg-[#4D694E]/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full md:w-auto px-4 py-2 border-2 border-[#4D694E] bg-[#FFF3D5] text-[#4D694E] hover:bg-[#4D694E] hover:text-[#FFF3D5] transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5"
           >
-            {copied ? 'Copied to Clipboard!' : 'Copy Raw Text'}
+            {copied ? (
+              <><Check className="w-3.5 h-3.5" weight="bold" /> COPIED TO CLIPBOARD</>
+            ) : (
+              <><Copy className="w-3.5 h-3.5" weight="bold" /> COPY RAW TEXT</>
+            )}
           </button>
 
-          <div className="flex gap-3 w-full md:w-auto">
-            <button onClick={onClose} className="flex-1 md:flex-none px-5 py-2.5 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-100 transition">
-              Cancel
+          <div className="flex gap-2.5 w-full md:w-auto">
+            <button 
+              onClick={onClose} 
+              className="flex-1 md:flex-none px-4 py-2 border-2 border-[#4D694E] bg-transparent hover:bg-[#4D694E]/10 text-[#4D694E] transition"
+            >
+              CANCEL
             </button>
             <button 
               onClick={handleExportPDF}
               disabled={finalBlocks.length === 0 || isExporting}
-              className="flex-1 md:flex-none px-6 py-2.5 rounded-xl font-bold text-sm text-[#FFF3D5] bg-[#4D694E] hover:bg-[#3a4f3b] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:hover:shadow-md flex items-center justify-center gap-2"
+              className="flex-1 md:flex-none px-5 py-2 border-2 border-[#4D694E] bg-[#4D694E] text-[#FFF3D5] hover:bg-[#3a4f3b] transition-all disabled:opacity-40 flex items-center justify-center gap-1.5"
             >
-              {isExporting ? 'Generating...' : 'Download PDF'}
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+              {isExporting ? 'GENERATING...' : 'DOWNLOAD PDF'}
+              <Download className="w-3.5 h-3.5" weight="bold" />
             </button>
           </div>
         </div>

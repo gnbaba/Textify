@@ -9,10 +9,11 @@ import type { ExtractionMode } from '../types/ocrTypes';
 import { doc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { LoginModal } from '../../auth/components/LoginModal';
-import { DndContext, DragEndEvent, closestCenter, } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy, arrayMove, } from '@dnd-kit/sortable';
+import { DndContext, DragEndEvent, closestCenter } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { SortableBlock } from './SortableBlock';
 import { ExportModal } from './ExportModal';
+import { Sparkle, CloudArrowUp, ListBullets, Copy, Warning, X, LockKey, Lightning, FileText, ArrowRight } from '@phosphor-icons/react';
 
 // Compresses image and applies fallback canvas to prevent mobile memory crashes
 const compressImage = async (file: File): Promise<File> => {
@@ -84,7 +85,6 @@ export const OcrWorkspace: React.FC = () => {
   const { status, text, progress, process, error } = useOcrProcessor(tesseractOcrService);
   const { activeDocument, setActiveDocument } = useWorkspace();
   
-  // Dynamically serves Cloud data for logged-in users, or Local data for guests
   const displayDocument = user ? (activeDocument ? documents.find(d => d.id === activeDocument.id) || null : null) : activeDocument;
   
   const [mode, setMode] = useState<ExtractionMode>('document');
@@ -102,11 +102,10 @@ export const OcrWorkspace: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   
   const [spamWarning, setSpamWarning] = useState(false);
-
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 3000);
+    const timer = setTimeout(() => setShowSplash(false), 2000);
 
     window.history.pushState(null, '', window.location.href);
     const handlePopState = () => {
@@ -121,7 +120,6 @@ export const OcrWorkspace: React.FC = () => {
     };
   }, []);
 
-  // Manages 3-day cooldown timer for guest limits
   const checkAndResetCooldown = () => {
     const exhaustedDateStr = localStorage.getItem('textify_exhausted_date');
     if (exhaustedDateStr) {
@@ -146,7 +144,6 @@ export const OcrWorkspace: React.FC = () => {
     }
   }, [user]);
 
-  // Captures OCR result and routes it to Cloud or Local storage
   useEffect(() => {
     const triggerCatcher = async () => {
       if (status !== 'success' || !text) return;
@@ -235,7 +232,6 @@ export const OcrWorkspace: React.FC = () => {
     }
   }, [displayDocument]); 
 
-  // Deletes block from Cloud if logged in, or local state if guest
   const confirmDeleteBlock = async () => {
     if (!displayDocument || !blockToDelete) return;
     try {
@@ -249,7 +245,7 @@ export const OcrWorkspace: React.FC = () => {
         });
       }
     } catch (err) {
-        console.error('Failed to delete block:', err);
+      console.error('Failed to delete block:', err);
     }
     setBlockToDelete(null);
   };
@@ -294,21 +290,18 @@ export const OcrWorkspace: React.FC = () => {
       return;
     }
 
-    // Validate File Type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
       alert("Invalid file type. Please upload a JPG, PNG, or WEBP image.");
       return; 
     }
 
-    // Validate File Size 
     const maxSizeInBytes = 10 * 1024 * 1024; 
     if (file.size > maxSizeInBytes) {
       alert("File is too large. Please keep images under 5MB.");
       return; 
     }
     
-    // Lock the workspace to prevent spam
     setIsPreparing(true);
     setIsProcessing(true);
     lastSavedTextRef.current = '';
@@ -333,7 +326,6 @@ export const OcrWorkspace: React.FC = () => {
       }
     }
 
-    // Process the validated image
     try {
       const safeFile = await compressImage(file);
       await process(safeFile, mode);
@@ -343,113 +335,126 @@ export const OcrWorkspace: React.FC = () => {
       alert(`OCR FAILED: ${errorMessage}`);
     } finally {
       setIsPreparing(false);
-      // 3 second cooldown
       setTimeout(() => {
         setIsProcessing(false);
       }, 3000);
     }
   };
 
+  // Modern Neo-Brutalist telemetry diagnostics bootsplash
   if (showSplash) {
     return (
-      <div className="fixed inset-0 z-[999] bg-[#FFF3D5] flex items-center justify-center">
-        <img 
-          src="/textify-logo.png" 
-          alt="Textify Loading" 
-          className="w-24 h-24 md:w-32 md:h-32 object-contain animate-pulse" 
-        />
+      <div className="fixed inset-0 z-[999] bg-[#FFF3D5] flex flex-col items-center justify-center p-6 text-[#4D694E] font-mono-industrial">
+        <div className="border-2 border-[#4D694E] p-6 max-w-sm w-full bg-[#FFF3D5] shadow-[6px_6px_0px_0px_#4D694E] select-none">
+          <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[#4D694E]/20">
+            <div className="w-5 h-5 bg-[#4D694E]" />
+            <span className="text-[10px] font-bold tracking-widest uppercase">TEXTIFY SYSTEMS v2.4</span>
+          </div>
+          <div className="space-y-1.5 text-[9px] font-bold text-[#4D694E]/70 uppercase">
+            <div>BOOTING CORE PROCESSOR... OK</div>
+            <div>MOUNTING TESSERACT MODULES... OK</div>
+            <div>ESTABLISHING SECURE PROTOCOLS... OK</div>
+            <div className="animate-pulse text-[#4D694E]">INITIALIZING WORKSPACE INDEX...</div>
+          </div>
+          <div className="mt-5 h-1.5 bg-[#4D694E]/10 overflow-hidden relative">
+            <div className="absolute inset-y-0 left-0 bg-[#4D694E] w-[60%] animate-pulse" />
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-5xl mx-auto relative px-4 md:px-0">
+    <div className="w-full max-w-5xl mx-auto relative px-4 md:px-0 font-mono-industrial text-[#4D694E]">
       <div className="mb-6 space-y-4 md:space-y-6">
         
-        <div className="flex flex-col md:flex-row justify-center gap-3 md:gap-1 md:bg-[#FFF3D5] md:p-1.5 md:rounded-xl md:shadow-sm md:border md:border-[#4D694E]/20">
-          <div className={`flex items-center gap-2 px-5 py-4 md:py-2 rounded-xl md:rounded-lg transition-all border md:border-none ${mode === 'document' ? 'bg-[#4D694E] text-white shadow-md border-[#4D694E]' : 'bg-white md:bg-transparent text-[#4D694E] hover:bg-[#4D694E]/10 border-[#4D694E]/20'}`}>
-            <button onClick={() => setMode('document')} disabled={isProcessing} className="text-base md:text-sm font-semibold flex-grow text-left disabled:opacity-50">
-              Document Mode
+        {/* Mode Selector Panel */}
+        <div className="flex flex-col md:flex-row justify-center gap-2.5 md:gap-0 bg-[#FFF3D5] border-2 border-[#4D694E] p-1">
+          <div className={`flex items-center justify-between gap-2 px-4 py-3 md:py-2 flex-1 transition-all ${mode === 'document' ? 'bg-[#4D694E] text-[#FFF3D5]' : 'bg-transparent text-[#4D694E] hover:bg-[#4D694E]/10'}`}>
+            <button onClick={() => setMode('document')} disabled={isProcessing} className="text-xs font-bold uppercase tracking-wide flex-grow text-left disabled:opacity-50">
+              [ DOCUMENT MODE ]
             </button>
-            <button type="button" className={`group relative flex items-center justify-center w-6 h-6 md:w-5 md:h-5 rounded-full border text-xs font-bold focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-white/50 ${mode === 'document' ? 'border-white/40 text-white/80' : 'border-[#4D694E]/40 text-[#4D694E]/70'}`}>
-              i
-              <div className="absolute bottom-full right-0 md:left-1/2 md:-translate-x-1/2 mb-3 w-56 md:w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus:opacity-100 group-focus:visible transition-all duration-200 bg-[#4D694E] text-[#FFF3D5] text-xs p-3 md:p-2.5 rounded-lg shadow-xl z-20 pointer-events-none text-left md:text-center font-normal leading-relaxed">
-                Reads every scattered word. Best for receipts, posters, and standard documents.
-                <div className="hidden md:block absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#4D694E]"></div>
+            <div className="group relative flex items-center justify-center w-5 h-5 border text-[9px] font-bold cursor-default select-none border-current">
+              ?
+              <div className="absolute bottom-full right-0 md:left-1/2 md:-translate-x-1/2 mb-3.5 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 bg-[#4D694E] text-[#FFF3D5] text-[9px] font-bold p-3 border border-[#FFF3D5]/20 z-20 pointer-events-none text-left uppercase leading-normal tracking-wide">
+                Reads every scattered word. Optimized for receipts, forms, and layout analysis.
               </div>
-            </button>
+            </div>
           </div>
 
-          <div className={`flex items-center gap-2 px-5 py-4 md:py-2 rounded-xl md:rounded-lg transition-all border md:border-none ${mode === 'graphic' ? 'bg-[#4D694E] text-white shadow-md border-[#4D694E]' : 'bg-white md:bg-transparent text-[#4D694E] hover:bg-[#4D694E]/10 border-[#4D694E]/20'}`}>
-            <button onClick={() => setMode('graphic')} disabled={isProcessing} className="text-base md:text-sm font-semibold flex-grow text-left disabled:opacity-50">
-              Graphic Mode
+          <div className="w-[2px] bg-[#4D694E] hidden md:block" />
+
+          <div className={`flex items-center justify-between gap-2 px-4 py-3 md:py-2 flex-1 transition-all ${mode === 'graphic' ? 'bg-[#4D694E] text-[#FFF3D5]' : 'bg-transparent text-[#4D694E] hover:bg-[#4D694E]/10'}`}>
+            <button onClick={() => setMode('graphic')} disabled={isProcessing} className="text-xs font-bold uppercase tracking-wide flex-grow text-left disabled:opacity-50">
+              [ GRAPHIC MODE ]
             </button>
-            <button type="button" className={`group relative flex items-center justify-center w-6 h-6 md:w-5 md:h-5 rounded-full border text-xs font-bold focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-white/50 ${mode === 'graphic' ? 'border-white/40 text-white/80' : 'border-[#4D694E]/40 text-[#4D694E]/70'}`}>
-              i
-              <div className="absolute bottom-full right-0 md:left-1/2 md:-translate-x-1/2 mb-3 w-56 md:w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus:opacity-100 group-focus:visible transition-all duration-200 bg-[#4D694E] text-[#FFF3D5] text-xs p-3 md:p-2.5 rounded-lg shadow-xl z-20 pointer-events-none text-left md:text-center font-normal leading-relaxed">
-                Reads single blocks of text. Best for heavily stylized logos and graphics.
-                <div className="hidden md:block absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#4D694E]"></div>
+            <div className="group relative flex items-center justify-center w-5 h-5 border text-[9px] font-bold cursor-default select-none border-current">
+              ?
+              <div className="absolute bottom-full right-0 md:left-1/2 md:-translate-x-1/2 mb-3.5 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 bg-[#4D694E] text-[#FFF3D5] text-[9px] font-bold p-3 border border-[#FFF3D5]/20 z-20 pointer-events-none text-left uppercase leading-normal tracking-wide">
+                Reads single blocks of text. Optimized for heavy logotypes, logos, and signages.
               </div>
-            </button>
+            </div>
           </div>
         </div>
 
         {spamWarning && (
-          <div className="w-full text-center mb-2 animate-in fade-in slide-in-from-top-2">
-            <span className="inline-flex items-center gap-1.5 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full text-xs font-bold border border-orange-200 shadow-sm">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              Cool down! Please wait a few seconds between scans.
+          <div className="w-full text-center mb-2 animate-pulse">
+            <span className="inline-flex items-center gap-1.5 bg-[#4D694E] text-[#FFF3D5] px-4 py-2 border-2 border-[#4D694E] text-[10px] font-bold uppercase tracking-wider">
+              <Warning className="w-4 h-4" weight="bold" />
+              COOL DOWN! WAIT A FEW SECONDS BETWEEN SCANS.
             </span>
           </div>
         )}
 
-        {/* The Dropzone */}
+        {/* Dropzone Wrapper */}
         <div className={isProcessing ? 'opacity-50 pointer-events-none' : ''}>
           <ImageDropzone onImageCaptured={handleProcessImage} />
         </div>
 
         {!user && (
           <div className="text-center mt-2">
-            <span className="text-xs font-bold bg-[#4D694E]/10 text-[#4D694E] px-4 py-2 rounded-full inline-block">
-              Guest Scans Remaining: {Math.max(0, 10 - guestScansCount)} / 10
+            <span className="text-[10px] font-bold bg-[#4D694E]/10 border border-[#4D694E]/20 text-[#4D694E] px-4 py-1.5 uppercase tracking-widest">
+              GUEST LIMIT: {Math.max(0, 10 - guestScansCount)} / 10 CYCLES
             </span>
           </div>
         )}
 
+        {/* Progress bar */}
         {(status === 'loading' || isPreparing || isProcessing) && (
-          <div className="w-full bg-[#4D694E]/20 rounded-full h-3 overflow-hidden">
-            <div className="bg-[#4D694E] h-3 transition-all duration-300" style={{ width: `${progress > 0 ? progress : 5}%` }} />
+          <div className="w-full border-2 border-[#4D694E] h-4 bg-[#FFF3D5]/50 overflow-hidden relative">
+            <div className="bg-[#4D694E] h-full transition-all duration-300 relative" style={{ width: `${progress > 0 ? progress : 8}%` }}>
+              <div className="absolute inset-0 scanlines opacity-50" />
+            </div>
+            <span className="absolute inset-0 flex items-center justify-center text-[8px] font-extrabold tracking-widest text-current mix-blend-difference">
+              OCR ANALYSIS IN PROGRESS /// {Math.round(progress)}%
+            </span>
           </div>
         )}
 
         {status === 'error' && error && (
-          <div className="w-full bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm font-mono break-all animate-in fade-in duration-300 shadow-sm">
-            <span className="font-bold uppercase text-xs tracking-wider block mb-1">Processing Failed</span>
+          <div className="w-full bg-[#FFF3D5] border-2 border-red-700 p-4 text-red-700 text-[10px] font-bold uppercase break-all shadow-[4px_4px_0px_0px_#B91C1C]">
+            <span className="font-black tracking-wider block mb-1 text-xs">!!! SCANNING TERMINATED !!!</span>
             {error}
           </div>
         )}
       </div>
 
       {displayDocument ? (
-        <div className="space-y-6 mt-8 border-t border-[#4D694E]/10 pt-8 animate-in fade-in duration-500">
+        <div className="space-y-6 mt-8 border-t-2 border-[#4D694E] pt-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
  
-             <div className="flex items-center gap-3">
-               <h2 className="text-xl md:text-2xl font-extrabold text-[#4D694E] truncate pr-4">{displayDocument.title}</h2>
-               <span className="text-xs font-bold bg-[#4D694E]/10 text-[#4D694E] px-3 py-1.5 rounded-full self-start md:self-auto whitespace-nowrap">Active Session</span>
+             <div className="flex items-center gap-3 min-w-0">
+               <h2 className="text-sm md:text-base font-extrabold text-[#4D694E] truncate uppercase tracking-wide">&gt;&gt;&gt; {displayDocument.title}</h2>
+               <span className="text-[8px] font-bold bg-[#4D694E] text-[#FFF3D5] px-2 py-1 tracking-widest uppercase flex-shrink-0">ACTIVE</span>
              </div>
 
              <button 
                onClick={() => setIsExportModalOpen(true)}
                disabled={selectedBlockIds.length === 0}
-               className="bg-[#4D694E] text-[#FFF3D5] px-5 py-2.5 md:py-2 rounded-xl font-bold text-sm shadow-sm hover:shadow-md hover:bg-[#3a4f3b] transition-all disabled:opacity-50 flex items-center justify-center gap-2 w-full md:w-auto"
+               className="bg-[#4D694E] text-[#FFF3D5] px-5 py-2.5 md:py-2 border-2 border-[#4D694E] font-bold text-[10px] tracking-wider uppercase hover:bg-[#3a4f3b] transition-all disabled:opacity-40 flex items-center justify-center gap-2 w-full md:w-auto"
              >
-               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-               </svg>
-               Export
+               <FileText className="w-4 h-4" weight="bold" />
+               [ EXPORT SELECTION ]
              </button>
           </div>
 
@@ -474,26 +479,35 @@ export const OcrWorkspace: React.FC = () => {
           </DndContext>
         </div>
       ) : (
-        <div className="text-center py-12 px-4 animate-in fade-in duration-500">
-           <p className="text-[#4D694E]/60 font-medium text-lg">Ready for a new extraction.</p>
-           <p className="text-[#4D694E]/40 text-sm mt-2">Tap the area above to start scanning!</p>
+        <div className="text-center py-14 border-2 border-dashed border-[#4D694E] bg-[#FFF3D5]/20 select-none">
+           <p className="text-[#4D694E] font-extrabold text-xs uppercase tracking-widest">--- READY FOR EXTRACTION PROTOCOL ---</p>
+           <p className="text-[#4D694E]/60 text-[9px] font-bold uppercase tracking-wider mt-2.5">PASTE OR DROP AN IMAGE TO INITIALIZE RAW STREAM</p>
         </div>
       )}
 
+      {/* Modal: Delete Block Confirmation */}
       {blockToDelete && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200 px-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 border border-gray-100">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#4D694E]/40 px-4">
+          <div className="bg-[#FFF3D5] w-full max-w-sm border-2 border-[#4D694E] overflow-hidden">
+            {/* Header bar */}
+            <div className="bg-[#4D694E] text-[#FFF3D5] px-4 py-2 flex items-center justify-between font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase">
+              <span>&lt; WARNING // DELETION &gt;</span>
+              <button onClick={() => setBlockToDelete(null)} className="hover:text-[#FFF3D5]/70">
+                <X className="w-3.5 h-3.5" weight="bold" />
+              </button>
+            </div>
+
             <div className="p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Extraction?</h3>
-              <p className="text-sm text-gray-500 mb-6 leading-relaxed">
-                Are you sure you want to delete this specific extraction from the thread? This action cannot be undone.
+              <h3 className="font-extrabold text-[12px] uppercase tracking-wide mb-2 text-[#4D694E]">PURGE EXTRACTION?</h3>
+              <p className="text-[10px] font-semibold text-[#4D694E]/70 mb-6 uppercase leading-relaxed tracking-[0.02em]">
+                ARE YOU SURE YOU WANT TO DELETE THIS EXTRACTED BLOCK FROM THE LOG THREAD? THIS CANNOT BE UNDONE.
               </p>
-              <div className="flex justify-end gap-3">
-                <button onClick={() => setBlockToDelete(null)} className="px-5 py-3 md:py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-colors">
-                  Cancel
+              <div className="flex justify-end gap-2.5 font-mono-industrial text-[9px] font-bold uppercase">
+                <button onClick={() => setBlockToDelete(null)} className="px-4 py-2 border border-[#4D694E]/30 hover:border-[#4D694E] transition-colors">
+                  CANCEL
                 </button>
-                <button onClick={confirmDeleteBlock} className="px-5 py-3 md:py-2 rounded-xl text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-sm">
-                  Delete
+                <button onClick={confirmDeleteBlock} className="px-4 py-2 border-2 border-[#4D694E] bg-red-700 text-white hover:bg-red-800 transition-colors">
+                  PURGE
                 </button>
               </div>
             </div>
@@ -501,39 +515,48 @@ export const OcrWorkspace: React.FC = () => {
         </div>
       )}
 
+      {/* Modal: Guest limit warning */}
       {showLimitModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-200 px-4">
-          <div className="bg-[#FFF3D5] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 border border-[#4D694E]/20">
-            <div className="p-6 md:p-8 text-center">
-              <div className="w-16 h-16 bg-[#4D694E]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-[#4D694E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              </div>
-              <h3 className="text-xl md:text-2xl font-extrabold text-[#4D694E] mb-2 tracking-tight">Daily Limit Reached</h3>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#4D694E]/50 px-4">
+          <div className="bg-[#FFF3D5] w-full max-w-md border-2 border-[#4D694E] overflow-hidden">
+            
+            {/* Header */}
+            <div className="bg-[#4D694E] text-[#FFF3D5] px-4 py-2.5 flex items-center justify-between font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase">
+              <span>&lt; SYSTEM ALERT // DATA LIMIT EXHAUSTED &gt;</span>
+              <button onClick={() => setShowLimitModal(false)} className="hover:text-[#FFF3D5]/70">
+                <X className="w-3.5 h-3.5" weight="bold" />
+              </button>
+            </div>
 
-              <p className="text-[#4D694E]/80 mb-8 leading-relaxed font-medium text-sm md:text-base">
-                You've used all 10 of your free guest scans! Your limits will naturally reset in 3 days, or you can sign in right now to unlock infinite cloud access.
+            <div className="p-6 text-center">
+              <div className="w-12 h-12 border-2 border-[#4D694E] bg-[#FFF3D5] flex items-center justify-center mx-auto mb-4">
+                <LockKey className="w-6 h-6 text-[#4D694E]" weight="bold" />
+              </div>
+              <h3 className="text-sm font-extrabold text-[#4D694E] uppercase mb-2.5 tracking-wide">Daily Cycles Exhausted</h3>
+
+              <p className="text-[#4D694E]/70 text-[10px] font-semibold uppercase leading-relaxed tracking-[0.02em] mb-6">
+                YOU HAVE EXHAUSTED ALL 10 FREE SCAN CYCLES AS A GUEST USER. YOUR CYCLE CAP WILL NATURALLY RE-INITIALIZE IN 3 DAYS. SIGN IN TO ACCESS UNLIMITED CLOUD SCANS IMMEDIATELY.
               </p>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2.5 font-bold text-[9px] tracking-wide uppercase">
                 <button 
                   onClick={() => {
                     setShowLimitModal(false);
                     setIsLoginModalOpen(true);
                   }} 
-                  className="w-full bg-[#4D694E] text-[#FFF3D5] py-3.5 px-4 rounded-xl font-bold text-base hover:bg-[#3a4f3b] transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                  className="w-full bg-[#4D694E] text-[#FFF3D5] py-3.5 px-4 border-2 border-[#4D694E] hover:bg-[#3a4f3b] transition-all flex items-center justify-center gap-2"
                 >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" /></svg>
-                  Sign in with Google
+                  <Lightning className="w-4 h-4" weight="fill" />
+                  AUTHENTICATE WITH GOOGLE
                 </button>
-                <button onClick={() => setShowLimitModal(false)} className="w-full text-[#4D694E]/70 py-3 px-4 rounded-xl font-bold text-sm hover:bg-[#4D694E]/5 transition-colors">
-                  Maybe Later
+                <button onClick={() => setShowLimitModal(false)} className="w-full text-[#4D694E]/60 py-2.5 px-4 border border-[#4D694E]/20 hover:border-[#4D694E] transition-colors">
+                  CLOSE PANEL
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
+      
       <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
       
       <ExportModal 
