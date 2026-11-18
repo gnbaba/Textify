@@ -1,7 +1,131 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Trash, Copy, Check, DotsSixVertical } from '@phosphor-icons/react';
+import { Trash2, Copy, Check, GripVertical } from 'lucide-react';
+
+export interface BlockCardProps {
+  id: string;
+  text: string;
+  onCopy?: (text: string, id: string) => void;
+  onDelete?: (id: string) => void;
+  isCopied?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
+  isOverlay?: boolean;
+  isDragging?: boolean;
+  dragHandleProps?: {
+    attributes?: Record<string, unknown>;
+    listeners?: Record<string, unknown>;
+  };
+}
+
+export const BlockCard: React.FC<BlockCardProps> = ({
+  id,
+  text,
+  onCopy,
+  onDelete,
+  isCopied = false,
+  isSelected = false,
+  onToggleSelect,
+  isOverlay = false,
+  isDragging = false,
+  dragHandleProps,
+}) => {
+  return (
+    <div
+      className={`bg-[#FFFDF7] border overflow-hidden mb-6 font-mono-industrial select-none ${
+        isOverlay
+          ? 'border-[#214C3A] shadow-drafting-lg rotate-[0.5deg] scale-[1.01] cursor-grabbing z-50'
+          : isDragging
+            ? 'opacity-30 border-dashed border-[#20251F]/40 shadow-none'
+            : isSelected
+              ? 'border-[#214C3A] shadow-drafting'
+              : 'border-[#20251F]/20 shadow-drafting-sm hover:border-[#20251F]/40 transition-[border-color,box-shadow] duration-150'
+      }`}
+    >
+      <div className="flex">
+        {/* Grab Handle */}
+        <div
+          {...(dragHandleProps?.attributes || {})}
+          {...(dragHandleProps?.listeners || {})}
+          className={`flex items-center justify-center px-3 touch-none select-none ${
+            isOverlay
+              ? 'bg-[#214C3A]/10 text-[#214C3A] cursor-grabbing'
+              : 'cursor-grab active:cursor-grabbing bg-[#F3EFE3]/50 border-r border-[#20251F]/15 hover:bg-[#F3EFE3] text-[#20251F]/60 hover:text-[#20251F] transition-colors'
+          }`}
+          title="Drag to reorder"
+        >
+          <GripVertical className="w-4 h-4 pointer-events-none" />
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="p-4 md:p-5">
+            <textarea
+              readOnly
+              value={text}
+              tabIndex={isOverlay ? -1 : undefined}
+              className="w-full h-40 md:h-48 p-4 resize-y focus:outline-none bg-[#FFFDF7] border border-[#20251F]/15 focus:border-[#20251F] text-[#20251F] font-mono text-xs md:text-sm leading-relaxed whitespace-pre-wrap break-words"
+            />
+          </div>
+
+          <div className="px-4 md:px-5 py-2.5 bg-[#F3EFE3]/30 border-t border-[#20251F]/15 flex flex-wrap justify-between items-center gap-3">
+            {/* Selector Checkbox */}
+            <label className={`flex items-center gap-2 select-none ${isOverlay ? 'pointer-events-none' : 'cursor-pointer group'}`}>
+              <div
+                className={`w-4 h-4 border flex items-center justify-center transition-colors ${
+                  isSelected
+                    ? 'bg-[#214C3A] border-[#214C3A]'
+                    : 'bg-[#FFFDF7] border-[#20251F]/40 group-hover:border-[#20251F]'
+                }`}
+              >
+                {isSelected && <Check className="w-3 h-3 text-[#FFFDF7]" />}
+              </div>
+              {!isOverlay && (
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={onToggleSelect}
+                  className="hidden"
+                />
+              )}
+              <span className="text-[10px] font-extrabold text-[#20251F] tracking-wider uppercase">
+                SELECT BLOCK
+              </span>
+            </label>
+
+            {/* Utility Actions */}
+            <div className="flex items-center gap-2 shrink-0 ml-auto font-bold text-[9px] tracking-wide uppercase">
+              <button
+                onClick={() => onDelete?.(id)}
+                disabled={isOverlay}
+                className="text-[#E96C3F] hover:bg-[#E96C3F]/10 border border-transparent hover:border-[#E96C3F]/30 flex items-center justify-center gap-1.5 px-3 py-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                type="button"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>DELETE</span>
+              </button>
+
+              <button
+                onClick={() => onCopy?.(text, id)}
+                disabled={isOverlay}
+                className={`px-4 py-1.5 border border-[#20251F]/20 transition-all flex items-center justify-center gap-1.5 shadow-drafting-sm cursor-pointer disabled:opacity-40 ${
+                  isCopied
+                    ? 'bg-[#214C3A] text-[#FFFDF7] border-[#214C3A]'
+                    : 'bg-[#FFFDF7] text-[#20251F] hover:bg-[#20251F] hover:text-[#FFFDF7]'
+                }`}
+                type="button"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>{isCopied ? 'COPIED!' : 'COPY BLOCK'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export interface SortableBlockProps {
   id: string;
@@ -13,13 +137,13 @@ export interface SortableBlockProps {
   onToggleSelect: () => void;
 }
 
-export const SortableBlock: React.FC<SortableBlockProps> = ({
+export const SortableBlock: React.FC<SortableBlockProps> = React.memo(({
   id,
   text,
   onCopy,
   onDelete,
   isCopied,
-  isSelected,     
+  isSelected,
   onToggleSelect,
 }) => {
   const {
@@ -32,78 +156,28 @@ export const SortableBlock: React.FC<SortableBlockProps> = ({
   } = useSortable({ id });
 
   const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.6 : 1,
+    transform: CSS.Translate.toString(transform),
+    transition: isDragging ? undefined : transition,
   };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`bg-[#FFF3D5] border-2 border-[#4D694E] overflow-hidden mb-6 font-mono-industrial transition-shadow duration-300 ${
-        isSelected ? 'shadow-[6px_6px_0px_0px_#4D694E]' : 'shadow-none'
-      }`}
-    >
-      <div className="flex">
-        {/* Grab Handle */}
-        <div
-          {...attributes}
-          {...listeners}
-          className="flex items-center justify-center px-3 cursor-grab active:cursor-grabbing bg-[#FFF3D5] border-r-2 border-[#4D694E] hover:bg-[#4D694E]/10"
-          title="Drag to reorder"
-        >
-          <DotsSixVertical className="w-5 h-5 text-[#4D694E]" weight="bold" />
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0"> 
-          <div className="p-4 md:p-5">
-            <textarea
-              readOnly
-              value={text}
-              className="w-full h-40 md:h-48 p-4 resize-y focus:outline-none bg-[#FFF3D5]/20 border-2 border-[#4D694E] text-[#4D694E] font-mono text-xs md:text-sm leading-relaxed whitespace-pre-wrap break-words"
-            />
-          </div>
-
-          <div className="px-4 md:px-5 py-3 bg-[#FFF3D5]/20 border-t-2 border-[#4D694E] flex flex-wrap justify-between items-center gap-3">
-
-            {/* Selector Checkbox */}
-            <label className="flex items-center gap-2 cursor-pointer group select-none">
-              <div className={`w-5 h-5 border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-[#4D694E] border-[#4D694E]' : 'bg-[#FFF3D5] border-[#4D694E] group-hover:bg-[#4D694E]/10'}`}>
-                {isSelected && <Check className="w-3.5 h-3.5 text-[#FFF3D5]" weight="bold" />}
-              </div>
-              <input type="checkbox" checked={isSelected} onChange={onToggleSelect} className="hidden" />
-              <span className="text-[10px] font-extrabold text-[#4D694E] tracking-wider uppercase">SELECT BLOCK</span>
-            </label>
-
-            {/* Utility Actions */}
-            <div className="flex items-center gap-2 shrink-0 ml-auto font-bold text-[9px] tracking-wide uppercase">
-              <button
-                onClick={() => onDelete(id)}
-                className="text-red-700 hover:text-white border-2 border-transparent hover:border-red-700 hover:bg-red-700 flex items-center justify-center gap-1 px-3 py-1.5 transition-colors"
-                type="button"
-              >
-                <Trash className="w-3.5 h-3.5" weight="bold" />
-                <span>DELETE</span>
-              </button>
-
-              <button
-                onClick={() => onCopy(text, id)}
-                className={`px-4 py-1.5 border-2 border-[#4D694E] transition-all flex items-center justify-center gap-1 ${
-                  isCopied 
-                    ? 'bg-[#4D694E] text-[#FFF3D5]' 
-                    : 'bg-[#FFF3D5] text-[#4D694E] hover:bg-[#4D694E] hover:text-[#FFF3D5]'
-                }`}
-                type="button"
-              >
-                <Copy className="w-3.5 h-3.5" weight="bold" />
-                <span>{isCopied ? 'COPIED!' : 'COPY BLOCK'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div ref={setNodeRef} style={style}>
+      <BlockCard
+        id={id}
+        text={text}
+        onCopy={onCopy}
+        onDelete={onDelete}
+        isCopied={isCopied}
+        isSelected={isSelected}
+        onToggleSelect={onToggleSelect}
+        isDragging={isDragging}
+        dragHandleProps={{
+          attributes: attributes as unknown as Record<string, unknown>,
+          listeners: listeners as unknown as Record<string, unknown>,
+        }}
+      />
     </div>
   );
-};
+});
+
+SortableBlock.displayName = 'SortableBlock';

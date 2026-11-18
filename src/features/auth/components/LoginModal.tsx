@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth'; 
-import { X, Check } from '@phosphor-icons/react';
+import { X, Check } from 'lucide-react';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -19,27 +19,27 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#4D694E]/40 px-4 font-mono-industrial text-[#4D694E]">
-      <div className="bg-[#FFF3D5] w-full max-w-sm border-2 border-[#4D694E] overflow-hidden">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#20251F]/50 backdrop-blur-sm px-4 font-mono-industrial text-[#20251F]">
+      <div className="bg-[#FFFDF7] w-full max-w-sm border border-[#20251F] shadow-drafting-lg overflow-hidden">
         
         {/* Header bar */}
-        <div className="bg-[#4D694E] text-[#FFF3D5] px-4 py-2.5 flex items-center justify-between font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase">
-          <span>&lt; SECURITY // SIGN-IN &gt;</span>
-          <button onClick={onClose} className="hover:text-[#FFF3D5]/70" aria-label="Close">
-            <X className="w-4 h-4" weight="bold" />
+        <div className="bg-[#20251F] text-[#FFFDF7] px-4 py-2.5 flex items-center justify-between font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase">
+          <span>[ AUTHENTICATE ]</span>
+          <button onClick={onClose} className="hover:text-[#E96C3F] transition-colors cursor-pointer" aria-label="Close">
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         <div className="p-6">
-          <h2 className="text-sm font-extrabold uppercase mb-2 tracking-wide">WELCOME BACK</h2>
-          <p className="text-[#4D694E]/70 text-[10px] font-semibold uppercase leading-relaxed tracking-[0.02em] mb-6">
+          <h2 className="text-sm font-black uppercase mb-1.5 tracking-tight text-[#20251F]">WELCOME TO TEXTIFY</h2>
+          <p className="text-[#20251F]/65 text-[10px] font-semibold uppercase leading-relaxed tracking-[0.02em] mb-6">
             SIGN IN TO ACCESS YOUR SECURE CLOUD STORAGE AND UNLIMITED EXTRACTIONS.
           </p>
 
           {/* Login Button */}
           <button 
             onClick={handleLoginClick} 
-            className="w-full bg-[#FFF3D5] border-2 border-[#4D694E] text-[#4D694E] py-3 px-4 font-bold text-[10px] tracking-[0.1em] uppercase hover:bg-[#4D694E] hover:text-[#FFF3D5] transition-all flex items-center justify-center gap-3 mb-6"
+            className="w-full bg-[#FFFDF7] border border-[#20251F]/30 text-[#20251F] py-3 px-4 font-bold text-[10px] tracking-[0.1em] uppercase hover:bg-[#20251F] hover:text-[#FFFDF7] transition-all flex items-center justify-center gap-3 mb-6 shadow-drafting-sm cursor-pointer"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -57,11 +57,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 type="checkbox" 
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="peer appearance-none w-5 h-5 border-2 border-[#4D694E] bg-[#FFF3D5] checked:bg-[#4D694E] checked:border-[#4D694E] transition-colors cursor-pointer"
+                className="peer appearance-none w-4 h-4 border border-[#20251F]/40 bg-[#F3EFE3] checked:bg-[#214C3A] checked:border-[#214C3A] transition-colors cursor-pointer"
               />
-              <Check className="w-3.5 h-3.5 text-[#FFF3D5] absolute pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" weight="bold" />
+              <Check className="w-3 h-3 text-[#FFFDF7] absolute pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" />
             </div>
-            <span className="text-[9px] font-bold text-[#4D694E]/80 group-hover:text-[#4D694E] uppercase tracking-wide transition-colors">
+            <span className="text-[9px] font-bold text-[#20251F]/70 group-hover:text-[#20251F] uppercase tracking-wide transition-colors">
               REMEMBER ME ON THIS DEVICE
             </span>
           </label>

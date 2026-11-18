@@ -18,23 +18,27 @@ function App() {
 
           <Route path="/app" element={
             <DashboardLayout>
-              <div className="border-2 border-[#4D694E] font-mono-industrial text-[#4D694E] divide-y-2 divide-[#4D694E] overflow-hidden bg-[#FFF3D5] shadow-[6px_6px_0px_0px_#4D694E]">
+              <div className="border border-[#20251F]/15 font-mono-industrial text-[#20251F] overflow-hidden bg-[#FFFDF7] shadow-drafting-sm">
                 {/* Header panel */}
-                <div className="p-5 bg-[#FFF3D5] relative">
-                  <span className="absolute top-2 left-2 text-[10px] text-[#4D694E]/25 font-bold">+</span>
-                  <h1 className="text-lg font-black tracking-wide uppercase">
-                    EXTRACT TEXT PROTOCOL
+                <div className="p-5 md:p-6 bg-[#FFFDF7] border-b border-[#20251F]/15 relative">
+                  <span className="absolute top-2.5 left-2.5 text-[10px] text-[#20251F]/30 font-bold select-none">+</span>
+                  <div className="font-mono-industrial text-[9px] font-bold tracking-[0.18em] uppercase text-[#20251F]/50 mb-1.5 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-[#214C3A] rounded-full" />
+                    <span>SYS.WORKSPACE &bull; LOCAL WASM INGESTION</span>
+                  </div>
+                  <h1 className="text-xl md:text-2xl font-black tracking-tight uppercase text-[#20251F]">
+                    EXTRACT TEXT
                   </h1>
-                  <p className="mt-1.5 text-[10px] font-bold text-[#4D694E]/60 uppercase tracking-wide">
-                    DROP GRAPHIC SUBSTRATE BELOW TO SCRAPE METADATA AND SAVE TO THE CLOUD HISTORY INDEX.
+                  <p className="mt-1 text-[10px] md:text-[11px] font-medium text-[#20251F]/60 uppercase tracking-wide">
+                    CLIENT-SIDE OPTICAL RECOGNITION. ZERO SERVER UPLOADS.
                   </p>
                 </div>
                 
                 {/* Workspace panel wrapper */}
-                <div className="bg-[#FFF3D5]/10 p-4 md:p-6">
+                <div className="bg-[#FFFDF7] p-4 md:p-6">
                   <Suspense fallback={
-                    <div className="h-[400px] w-full animate-pulse bg-[#FFF3D5]/40 border-2 border-dashed border-[#4D694E] flex flex-col items-center justify-center font-mono-industrial text-[10px] font-bold uppercase text-[#4D694E]/50">
-                      <span>/// RETRIEVING WORKSPACE MODULES ///</span>
+                    <div className="h-[400px] w-full animate-pulse bg-[#F3EFE3]/30 border border-dashed border-[#20251F]/20 flex flex-col items-center justify-center font-mono-industrial text-[10px] font-bold uppercase text-[#20251F]/50">
+                      <span>[ INITIALIZING CLIENT RUNTIME ]</span>
                     </div>
                   }>
                     <OcrWorkspace />
