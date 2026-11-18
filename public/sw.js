@@ -1,7 +1,8 @@
-const CACHE_NAME = 'textify-cache-v2';
+const CACHE_NAME = 'textify-cache-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
+  '/favicon.png',
   '/New_Textify.png',
   '/ocr-assets/worker.min.js',
   '/ocr-assets/eng.traineddata.gz',
