@@ -3,15 +3,15 @@ import { useWorkspace } from '../../shared/context/WorkspaceContext';
 import { useAuth } from '../../features/auth/hooks/useAuth';
 import { useCloudHistory } from '../../features/history/hooks/useCloudHistory';
 import { 
-  CaretLeft, 
+  PanelLeftClose, 
+  PanelLeftOpen, 
   Plus, 
-  Trash, 
-  SignOut, 
-  List, 
-  DotsThreeVertical, 
-  X,
-  PushPin
-} from '@phosphor-icons/react';
+  Trash2, 
+  LogOut, 
+  MoreVertical, 
+  Pin, 
+  X 
+} from 'lucide-react';
 
 import { LoginModal } from '../../features/auth/components/LoginModal';
 
@@ -110,69 +110,73 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
     if (window.innerWidth < 768) setIsSidebarOpen(false);
   };
 
-  const safeAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || user?.email || 'User')}&background=4D694E&color=FFF3D5&rounded=false`;
+  const safeAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || user?.email || 'User')}&background=20251F&color=FFFDF7&rounded=false`;
 
   return (
-    <div className="flex h-screen bg-[#FFF3D5] overflow-hidden font-mono-industrial relative text-[#4D694E]">
+    <div className="flex h-screen bg-[#F3EFE3] overflow-hidden font-mono-industrial relative text-[#20251F]">
       <div className="fixed inset-0 noise-bg pointer-events-none z-[1]" />
       <div className="fixed inset-0 halftone-overlay pointer-events-none z-[1]" />
       
       {/* Mobile backdrop */}
       <div 
-        className={`md:hidden fixed inset-0 bg-[#4D694E]/40 backdrop-blur-xs z-40 transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`md:hidden fixed inset-0 bg-[#20251F]/40 backdrop-blur-xs z-40 transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={() => setIsSidebarOpen(false)}
       />
 
       {/* Sidebar Panel */}
-      <div className={`
+      <aside className={`
         fixed md:relative inset-y-0 left-0 z-50 h-full
-        bg-[#FFF3D5] border-r-2 border-[#4D694E] flex flex-col
-        transition-all duration-300 ease-in-out
+        bg-[#FFFDF7] border-r border-[#20251F]/15 flex flex-col
+        transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden
         ${isSidebarOpen 
           ? 'translate-x-0 w-72 opacity-100' 
-          : '-translate-x-full md:translate-x-0 md:w-0 md:opacity-0 overflow-hidden'}
+          : '-translate-x-full md:translate-x-0 md:w-0 md:opacity-0 pointer-events-none'}
       `}>
         {/* Sidebar Header */}
-        <div className="p-4 flex justify-between items-center border-b-2 border-[#4D694E] h-16 min-w-[18rem]">
-          <span className="font-extrabold text-sm tracking-[0.15em] uppercase">TEXTIFY // DB</span>
+        <div className="p-4 flex justify-between items-center border-b border-[#20251F]/15 h-16 min-w-[18rem]">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2 h-2 bg-[#214C3A] rounded-full" />
+            <span className="font-extrabold text-xs tracking-[0.18em] uppercase text-[#20251F]">TEXTIFY &bull; VAULT</span>
+          </div>
           <button 
             onClick={() => setIsSidebarOpen(false)} 
-            className="p-1.5 border border-[#4D694E]/30 hover:border-[#4D694E] transition-colors flex items-center justify-center"
-            aria-label="Collapse Menu"
+            className="p-1.5 border border-[#20251F]/20 hover:border-[#20251F] hover:bg-[#20251F]/5 transition-colors flex items-center justify-center cursor-pointer text-[#20251F]"
+            aria-label="Collapse Sidebar"
+            title="Collapse Sidebar"
           >
-            <CaretLeft className="w-4 h-4" weight="bold" />
+            <PanelLeftClose className="w-4 h-4" />
           </button>
         </div>
 
         {/* Action Button Section */}
-        <div className="p-4 border-b-2 border-[#4D694E] min-w-[18rem]">
+        <div className="p-4 border-b border-[#20251F]/15 min-w-[18rem]">
           <button 
             onClick={() => { setActiveDocument(null); setOpenMenuId(null); handleMobileNavClose(); }} 
-            className="w-full flex items-center justify-center gap-2 bg-[#4D694E] text-[#FFF3D5] py-3 px-4 font-bold text-[10px] tracking-[0.1em] uppercase hover:bg-[#3a4f3b] active:scale-[0.97] transition-all border-2 border-[#4D694E]"
+            className="w-full flex items-center justify-center gap-2 bg-[#214C3A] text-[#FFFDF7] py-3 px-4 font-bold text-[10px] tracking-[0.12em] uppercase hover:bg-[#183a2b] active:scale-[0.99] transition-all shadow-drafting-sm cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" weight="bold" />
-            [ NEW EXTRACTION ]
+            <Plus className="w-3.5 h-3.5" />
+            NEW EXTRACTION
           </button>
         </div>
 
         {/* Sidebar Content (Documents list) */}
-        <div className="flex-1 overflow-y-auto px-3 py-4 min-w-[18rem] border-b-2 border-[#4D694E]">
-          <div className="font-mono-industrial text-[9px] font-bold text-[#4D694E]/40 tracking-[0.15em] uppercase mb-4 px-2">
-            /// DOCUMENT INDEX
+        <div className="flex-1 overflow-y-auto px-3 py-4 min-w-[18rem] border-b border-[#20251F]/15">
+          <div className="font-mono-industrial text-[9px] font-bold text-[#20251F]/50 tracking-[0.18em] uppercase mb-4 px-2">
+            DOCUMENT INDEX
           </div>
           
           <div className="space-y-1">
             {!user ? (
-              <div className="text-[10px] text-[#4D694E]/60 px-3 uppercase tracking-wide leading-relaxed font-semibold">
-                [ SIGN IN TO ENABLE PERMANENT HISTORICAL ARCHIVE ]
+              <div className="text-[10px] text-[#20251F]/60 px-3 uppercase tracking-wide leading-relaxed font-semibold">
+                [ SIGN IN TO ENABLE CLOUD ARCHIVE ]
               </div>
             ) : isHistoryLoading ? (
-              <div className="text-[10px] text-[#4D694E]/60 px-3 animate-pulse uppercase tracking-wide">
+              <div className="text-[10px] text-[#20251F]/60 px-3 animate-pulse uppercase tracking-wide">
                 RETRIEVING RECORD INDEX...
               </div>
             ) : documents.length === 0 ? (
-              <div className="text-[10px] text-[#4D694E]/60 px-3 uppercase tracking-wide italic">
-                -- INDEX IS EMPTY --
+              <div className="text-[10px] text-[#20251F]/60 px-3 uppercase tracking-wide italic">
+                INDEX IS EMPTY
               </div>
             ) : (
               documents.map((item) => {
@@ -180,7 +184,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                 return (
                   <div 
                     key={item.id} 
-                    className="relative group border-b border-[#4D694E]/30 last:border-b-0" 
+                    className="relative group border-b border-[#20251F]/10 last:border-b-0" 
                     onMouseEnter={() => setHoveredDocId(item.id)} 
                     onMouseLeave={() => {
                       setHoveredDocId(null);
@@ -189,16 +193,16 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                   >
                     <button 
                       onClick={() => { setActiveDocument(item); setOpenMenuId(null); handleMobileNavClose(); }} 
-                      className={`w-full text-left px-3 py-3 transition-colors flex items-start gap-2.5 ${isActive ? 'bg-[#4D694E]/10 border-l-4 border-[#4D694E] pl-1.5' : 'hover:bg-[#4D694E]/5'}`}
+                      className={`w-full text-left px-3 py-3 transition-colors flex items-start gap-2.5 cursor-pointer ${isActive ? 'bg-[#20251F]/5 border-l-2 border-[#214C3A] pl-2' : 'hover:bg-[#20251F]/[0.03]'}`}
                     >
                       <div className="flex-1 overflow-hidden">
                         <div className="flex items-center gap-1.5 pr-6">
                           {item.isPinned && (
-                            <PushPin className="w-3 h-3 text-[#4D694E] shrink-0" weight="fill" />
+                            <Pin className="w-3 h-3 text-[#214C3A] fill-current shrink-0" />
                           )}
-                          <p className="text-[11px] font-extrabold text-[#4D694E] truncate uppercase tracking-wide">{item.title}</p>
+                          <p className="text-[11px] font-extrabold text-[#20251F] truncate uppercase tracking-wide">{item.title}</p>
                         </div>
-                        <p className="text-[8px] text-[#4D694E]/40 mt-1 tracking-wider uppercase font-semibold">{formatDate(item.timestamp)}</p>
+                        <p className="text-[8px] text-[#20251F]/40 mt-1 tracking-wider uppercase font-semibold">{formatDate(item.timestamp)}</p>
                       </div>
                     </button>
 
@@ -206,28 +210,29 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                       <div className="absolute top-3 right-2 flex items-center">
                         <button 
                           onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === item.id ? null : item.id); }} 
-                          className={`p-1 border-2 border-[#4D694E] transition-colors ${openMenuId === item.id ? 'bg-[#4D694E] text-[#FFF3D5]' : 'bg-[#FFF3D5] text-[#4D694E] hover:bg-[#4D694E] hover:text-[#FFF3D5]'}`}
+                          className={`p-1 border border-[#20251F]/20 transition-colors cursor-pointer ${openMenuId === item.id ? 'bg-[#20251F] text-[#FFFDF7]' : 'bg-[#FFFDF7] text-[#20251F] hover:bg-[#20251F] hover:text-[#FFFDF7]'}`}
+                          aria-label="Actions"
                         >
-                          <DotsThreeVertical className="w-3.5 h-3.5" weight="bold" />
+                          <MoreVertical className="w-3.5 h-3.5" />
                         </button>
                         
                         {openMenuId === item.id && (
-                          <div className="absolute right-0 top-7 w-28 bg-[#FFF3D5] border-2 border-[#4D694E] z-50 p-1 flex flex-col text-[9px] font-bold tracking-[0.05em] uppercase">
+                          <div className="absolute right-0 top-7 w-28 bg-[#FFFDF7] border border-[#20251F] shadow-drafting z-50 p-1 flex flex-col text-[9px] font-bold tracking-[0.05em] uppercase">
                             <button 
                               onClick={(e) => handleTogglePinClick(item.id, item.isPinned || false, e)} 
-                              className="w-full text-left px-2 py-1.5 hover:bg-[#4D694E] hover:text-[#FFF3D5] transition-colors"
+                              className="w-full text-left px-2 py-1.5 hover:bg-[#20251F] hover:text-[#FFFDF7] transition-colors cursor-pointer"
                             >
                               {item.isPinned ? 'UNPIN' : 'PIN'}
                             </button>
                             <button 
                               onClick={(e) => handleRenameSessionClick(item.id, item.title, e)} 
-                              className="w-full text-left px-2 py-1.5 hover:bg-[#4D694E] hover:text-[#FFF3D5] transition-colors border-t-2 border-[#4D694E]"
+                              className="w-full text-left px-2 py-1.5 hover:bg-[#20251F] hover:text-[#FFFDF7] transition-colors border-t border-[#20251F]/10 cursor-pointer"
                             >
                               RENAME
                             </button>
                             <button 
                               onClick={(e) => handleDeleteSessionClick(item.id, e)} 
-                              className="w-full text-left px-2 py-1.5 text-red-700 hover:bg-red-700 hover:text-white transition-colors border-t-2 border-[#4D694E]"
+                              className="w-full text-left px-2 py-1.5 text-[#E96C3F] hover:bg-[#E96C3F] hover:text-[#FFFDF7] transition-colors border-t border-[#20251F]/10 cursor-pointer"
                             >
                               DELETE
                             </button>
@@ -244,23 +249,23 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
 
         {/* User / Session Footer Panel */}
         {!isAuthLoading && (
-          <div className="mt-auto bg-[#FFF3D5] p-4 min-w-[18rem] z-10 border-t-2 border-r-2 border-[#4D694E]">
+          <div className="mt-auto bg-[#FFFDF7] p-4 min-w-[18rem] z-10 border-t border-[#20251F]/15">
             {user ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <img 
                     src={user.photoURL || safeAvatarUrl} 
                     alt="Profile" 
-                    className="w-10 h-10 border-2 border-[#4D694E] object-cover bg-[#FFF3D5]"
+                    className="w-10 h-10 border border-[#20251F]/20 object-cover bg-[#F3EFE3]"
                     onError={(e) => {
                       e.currentTarget.onerror = null;
                       e.currentTarget.src = safeAvatarUrl;
                     }}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="font-extrabold text-[10px] tracking-wide text-[#4D694E] truncate uppercase">{user.displayName || 'SYS.USER'}</p>
-                    <p className="text-[7px] font-bold text-[#4D694E]/60 mt-0.5 px-1.5 py-0.5 inline-block bg-[#4D694E]/5 border border-[#4D694E]/20">
-                      LEVEL // PRO
+                    <p className="font-extrabold text-[10px] tracking-wide text-[#20251F] truncate uppercase">{user.displayName || 'SYS.USER'}</p>
+                    <p className="text-[7px] font-bold text-[#20251F]/60 mt-0.5 px-1.5 py-0.5 inline-block bg-[#20251F]/5 border border-[#20251F]/15">
+                      PRO
                     </p>
                   </div>
                 </div>
@@ -268,66 +273,66 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                 <button 
                   onClick={handleClearCache} 
                   disabled={isClearingCache}
-                  className="w-full text-center bg-[#FFF3D5] text-[#4D694E] py-2.5 px-4 font-bold text-[9px] tracking-[0.1em] uppercase hover:bg-[#4D694E] hover:text-[#FFF3D5] border-2 border-[#4D694E] transition-all flex items-center justify-center gap-1.5 group disabled:opacity-50"
+                  className="w-full text-center bg-[#FFFDF7] text-[#20251F] py-2.5 px-4 font-bold text-[9px] tracking-[0.1em] uppercase hover:bg-[#20251F] hover:text-[#FFFDF7] border border-[#20251F]/20 transition-all flex items-center justify-center gap-1.5 group disabled:opacity-50 cursor-pointer"
                 >
-                  <Trash className="w-3.5 h-3.5 text-[#4D694E] group-hover:text-current" weight="bold" />
+                  <Trash2 className="w-3.5 h-3.5 text-[#20251F]/60 group-hover:text-current" />
                   {isClearingCache ? 'CLEARING...' : cacheClearedStatus ? 'CACHE CLEARED!' : 'CLEAR CACHE'}
                 </button>
 
                 <button 
                   onClick={logout} 
-                  className="w-full text-center bg-[#FFF3D5] text-[#4D694E] py-2.5 px-4 font-bold text-[9px] tracking-[0.1em] uppercase hover:bg-[#4D694E] hover:text-[#FFF3D5] border-2 border-[#4D694E] transition-all flex items-center justify-center gap-1.5 group"
+                  className="w-full text-center bg-[#FFFDF7] text-[#20251F] py-2.5 px-4 font-bold text-[9px] tracking-[0.1em] uppercase hover:bg-[#20251F] hover:text-[#FFFDF7] border border-[#20251F]/20 transition-all flex items-center justify-center gap-1.5 group cursor-pointer"
                 >
-                  <SignOut className="w-3.5 h-3.5 text-[#4D694E] group-hover:text-current" weight="bold" />
+                  <LogOut className="w-3.5 h-3.5 text-[#20251F]/60 group-hover:text-current" />
                   SIGN OUT
                 </button>
               </div>
             ) : (
               <button 
                 onClick={() => setIsLoginModalOpen(true)} 
-                className="w-full bg-[#4D694E] text-[#FFF3D5] py-3 px-4 font-bold text-[9px] tracking-[0.1em] uppercase border-2 border-[#4D694E] hover:bg-[#3a4f3b] transition-all flex items-center gap-2 justify-center"
+                className="w-full bg-[#214C3A] text-[#FFFDF7] py-3 px-4 font-bold text-[9px] tracking-[0.1em] uppercase hover:bg-[#183a2b] transition-all flex items-center gap-2 justify-center shadow-drafting-sm cursor-pointer"
               >
                 SIGN IN WITH GOOGLE
               </button>
             )}
           </div>
         )}
-      </div>
+      </aside>
 
       {/* Main Container */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
         {/* Top Header Bar */}
-        <header className="h-16 flex items-center px-4 md:px-6 z-10 border-b-2 border-[#4D694E] justify-between">
+        <header className="h-16 flex items-center px-4 md:px-6 z-10 border-b border-[#20251F]/15 bg-[#FFFDF7] justify-between">
           <div className="flex items-center flex-1">
             {!isSidebarOpen && (
               <button 
                 onClick={() => setIsSidebarOpen(true)} 
-                className="p-1.5 border-2 border-[#4D694E] hover:bg-[#4D694E]/10 text-[#4D694E] transition-colors flex items-center justify-center gap-1.5 mr-4"
+                className="p-1.5 border border-[#20251F]/20 hover:border-[#20251F] hover:bg-[#20251F]/5 text-[#20251F] transition-colors flex items-center justify-center gap-2 mr-4 cursor-pointer"
                 aria-label="Expand Sidebar"
+                title="Expand Sidebar"
               >
-                <List className="w-4 h-4" weight="bold" />
-                <span className="font-mono-industrial text-[9px] font-bold tracking-[0.1em] uppercase md:block hidden">INDEX</span>
+                <PanelLeftOpen className="w-4 h-4" />
+                <span className="font-mono-industrial text-[9px] font-bold tracking-[0.12em] uppercase md:block hidden">INDEX</span>
               </button>
             )}
             <div className="flex items-center gap-2 font-mono-industrial text-[10px] font-bold">
-              <span className="text-[#4D694E]/30">&lt;&lt;&lt;</span>
-              <span className="uppercase tracking-widest text-[#4D694E]/60">WORKSPACE PROTOCOL ACTIVE</span>
-              <span className="text-[#4D694E]/30">&gt;&gt;&gt;</span>
+              <span className="w-1.5 h-1.5 bg-[#214C3A] rounded-full animate-pulse" />
+              <span className="uppercase tracking-[0.18em] text-[#20251F]/70">WORKSPACE ACTIVE</span>
             </div>
           </div>
           
           <div className="flex items-center shrink-0">
             <a 
               href="/"
-              className="font-mono-industrial text-[9px] font-bold tracking-[0.1em] uppercase bg-[#FFF3D5] hover:bg-[#4D694E] hover:text-[#FFF3D5] border-2 border-[#4D694E] px-3.5 py-1.5 transition-all shadow-[2px_2px_0px_0px_#4D694E] hover:shadow-none active:translate-y-0.5 active:translate-x-0.5 relative z-10"
+              className="font-mono-industrial text-[9px] font-bold tracking-[0.12em] uppercase bg-[#FFFDF7] hover:bg-[#20251F] hover:text-[#FFFDF7] border border-[#20251F]/20 px-3.5 py-1.5 transition-all shadow-drafting-sm active:translate-y-0.5 relative z-10 cursor-pointer"
             >
-              [ ← EXIT WORKSPACE ]
+              [ &larr; EXIT WORKSPACE ]
             </a>
           </div>
         </header>
 
         {/* Main Work Area */}
-        <main onClick={() => setOpenMenuId(null)} className="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center">
+        <main onClick={() => setOpenMenuId(null)} className="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center bg-[#F3EFE3]">
           <div className="max-w-3xl w-full">
             {children}
           </div>
@@ -336,32 +341,32 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
 
       {/* Modal: Delete Confirmation */}
       {sessionToDelete && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#4D694E]/40 px-4">
-          <div className="bg-[#FFF3D5] w-full max-w-sm border-2 border-[#4D694E] overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#20251F]/50 backdrop-blur-sm px-4">
+          <div className="bg-[#FFFDF7] w-full max-w-sm border border-[#20251F] shadow-drafting-lg overflow-hidden">
             {/* Header */}
-            <div className="bg-[#4D694E] text-[#FFF3D5] px-4 py-2 flex items-center justify-between font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase">
-              <span>&lt; WARNING // DELETION &gt;</span>
-              <button onClick={() => setSessionToDelete(null)} className="hover:text-[#FFF3D5]/70">
-                <X className="w-3.5 h-3.5" weight="bold" />
+            <div className="bg-[#20251F] text-[#FFFDF7] px-4 py-2.5 flex items-center justify-between font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase">
+              <span>[ CONFIRM DELETION ]</span>
+              <button onClick={() => setSessionToDelete(null)} className="hover:text-[#E96C3F] transition-colors cursor-pointer" aria-label="Close">
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
             
             <div className="p-6">
-              <h3 className="font-extrabold text-[12px] uppercase tracking-wide mb-2 text-[#4D694E]">PURGE SESSION?</h3>
-              <p className="text-[10px] font-semibold text-[#4D694E]/70 mb-6 uppercase leading-relaxed tracking-[0.02em]">
+              <h3 className="font-extrabold text-[12px] uppercase tracking-wide mb-2 text-[#20251F]">PURGE SESSION?</h3>
+              <p className="text-[10px] font-semibold text-[#20251F]/70 mb-6 uppercase leading-relaxed tracking-[0.02em]">
                 ARE YOU SURE YOU WANT TO DELETE THIS SESSION AND ALL EXTRACTIONS ATTACHED TO IT? THIS ACTION IS IRREVERSIBLE.
               </p>
               
               <div className="flex justify-end gap-2.5 font-mono-industrial text-[9px] font-bold uppercase">
                 <button 
                   onClick={() => setSessionToDelete(null)}
-                  className="px-4 py-2 border border-[#4D694E]/30 hover:border-[#4D694E] transition-colors"
+                  className="px-4 py-2 border border-[#20251F]/30 hover:border-[#20251F] text-[#20251F] transition-colors cursor-pointer"
                 >
                   CANCEL
                 </button>
                 <button 
                   onClick={confirmDelete}
-                  className="px-4 py-2 border-2 border-[#4D694E] bg-red-700 hover:bg-red-800 text-white transition-colors"
+                  className="px-4 py-2 bg-[#E96C3F] hover:bg-[#d55a2f] text-white transition-colors cursor-pointer shadow-drafting-sm"
                 >
                   CONFIRM PURGE
                 </button>
@@ -373,19 +378,19 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
 
       {/* Modal: Rename Session */}
       {sessionToRename && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#4D694E]/40 px-4">
-          <div className="bg-[#FFF3D5] w-full max-w-sm border-2 border-[#4D694E] overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#20251F]/50 backdrop-blur-sm px-4">
+          <div className="bg-[#FFFDF7] w-full max-w-sm border border-[#20251F] shadow-drafting-lg overflow-hidden">
             {/* Header */}
-            <div className="bg-[#4D694E] text-[#FFF3D5] px-4 py-2 flex items-center justify-between font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase">
-              <span>&lt; PROTOCOL // RENAME &gt;</span>
-              <button onClick={() => setSessionToRename(null)} className="hover:text-[#FFF3D5]/70">
-                <X className="w-3.5 h-3.5" weight="bold" />
+            <div className="bg-[#20251F] text-[#FFFDF7] px-4 py-2.5 flex items-center justify-between font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase">
+              <span>[ RENAME SESSION ]</span>
+              <button onClick={() => setSessionToRename(null)} className="hover:text-[#E96C3F] transition-colors cursor-pointer" aria-label="Close">
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
             
             <div className="p-6">
-              <h3 className="font-extrabold text-[12px] uppercase tracking-wide mb-2 text-[#4D694E]">RENAME SESSION INDEX</h3>
-              <p className="text-[9px] font-semibold text-[#4D694E]/60 mb-4 uppercase tracking-[0.02em]">ENTER NEW LOG IDENTIFIER BELOW.</p>
+              <h3 className="font-extrabold text-[12px] uppercase tracking-wide mb-2 text-[#20251F]">RENAME SESSION INDEX</h3>
+              <p className="text-[9px] font-semibold text-[#20251F]/60 mb-4 uppercase tracking-[0.02em]">ENTER NEW LOG IDENTIFIER BELOW.</p>
               
               <input 
                 type="text" 
@@ -393,19 +398,19 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                 onChange={(e) => setRenameInput(e.target.value)}
                 autoFocus
                 onKeyDown={(e) => { if (e.key === 'Enter') confirmRename(); }}
-                className="w-full px-3 py-2 border-2 border-[#4D694E] bg-[#FFF3D5] focus:outline-none focus:ring-1 focus:ring-[#4D694E] text-[#4D694E] font-bold font-mono-industrial text-[11px] uppercase mb-6"
+                className="w-full px-3 py-2 border border-[#20251F]/30 bg-[#F3EFE3]/30 focus:outline-none focus:border-[#20251F] text-[#20251F] font-bold font-mono-industrial text-[11px] uppercase mb-6"
               />
               
               <div className="flex justify-end gap-2.5 font-mono-industrial text-[9px] font-bold uppercase">
                 <button 
                   onClick={() => setSessionToRename(null)}
-                  className="px-4 py-2 border-2 border-[#4D694E] bg-transparent hover:bg-[#4D694E]/10 transition-colors"
+                  className="px-4 py-2 border border-[#20251F]/30 hover:border-[#20251F] text-[#20251F] transition-colors cursor-pointer"
                 >
                   CANCEL
                 </button>
                 <button 
                   onClick={confirmRename}
-                  className="px-4 py-2 border-2 border-[#4D694E] bg-[#4D694E] text-[#FFF3D5] hover:bg-[#3a4f3b] transition-colors"
+                  className="px-4 py-2 bg-[#214C3A] text-[#FFFDF7] hover:bg-[#183a2b] transition-colors cursor-pointer shadow-drafting-sm"
                 >
                   SAVE CHANGES
                 </button>
