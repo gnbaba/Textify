@@ -6,7 +6,8 @@
 
 @layer base {
   html, body {
-    background-color: #FFF3D5;
+    background-color: #F3EFE3;
+    color: #20251F;
     overscroll-behavior-y: none;
   }
   body {
@@ -19,59 +20,83 @@
   font-family: 'JetBrains Mono', 'Courier New', monospace;
 }
 
-/* Custom scrollbar */
+/* Clean architectural scrollbar removal (smooth scroll remains 100% active) */
 ::-webkit-scrollbar {
-  width: 6px;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
-::-webkit-scrollbar-track {
-  background: #FFF3D5;
+
+html, body {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
 }
-::-webkit-scrollbar-thumb {
-  background: #4D694E;
-  border-radius: 0;
+
+/* ═══════════════════════════════════════════════════════
+   LENIS SMOOTH SCROLL SUPPORT
+   ═══════════════════════════════════════════════════════ */
+html.lenis, html.lenis body {
+  height: auto;
 }
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════
+   ARCHITECTURAL DRAFTING SYSTEM PRIMITIVES
+   ═══════════════════════════════════════════════════════ */
 
 /* Mechanical noise grain overlay */
 .noise-bg {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  opacity: 0.03;
+  opacity: 0.025;
 }
 
-/* Halftone dot pattern overlay (Swiss Industrial Print) */
-.halftone-overlay {
-  background-image: radial-gradient(circle, rgba(77, 105, 78, 0.06) 1px, transparent 1px);
-  background-size: 4px 4px;
+/* Architectural drafting paper grid underlay */
+.drafting-grid-bg {
+  background-image: 
+    linear-gradient(to right, rgba(32, 37, 31, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(32, 37, 31, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
-/* Scanline effect for inverted blocks */
-.scanlines {
-  background-image: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(255, 243, 213, 0.04) 2px,
-    rgba(255, 243, 213, 0.04) 4px
-  );
+/* Subtle dot grid pattern */
+.drafting-dot-bg {
+  background-image: radial-gradient(circle, rgba(32, 37, 31, 0.06) 1px, transparent 1px);
+  background-size: 8px 8px;
 }
 
-/* Marquee for the industrial ticker */
-@keyframes marquee-industrial {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+/* Perforated dashed divider line */
+.perforated-border {
+  background-image: linear-gradient(to right, rgba(32, 37, 31, 0.3) 50%, transparent 50%);
+  background-size: 6px 1px;
+  background-repeat: repeat-x;
 }
 
-/* Scan sweep for mockup */
-@keyframes scan-sweep {
-  0% { top: 0%; opacity: 1; }
-  80% { top: 92%; opacity: 0.6; }
-  100% { top: 0%; opacity: 0; }
+/* Corner drafting crosshair marker (+) */
+.corner-crosshair {
+  position: absolute;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  line-height: 1;
+  color: rgba(32, 37, 31, 0.35);
+  user-select: none;
+  pointer-events: none;
 }
 
 /* ═══════════════════════════════════════════════════════
-   GSAP ANIMATION SUPPORT
+   GSAP ANIMATION & MOTION PRIMITIVES
    ═══════════════════════════════════════════════════════ */
 
-/* GPU-accelerated transforms for animated elements */
 .will-change-transform {
   will-change: transform, opacity;
 }
@@ -86,7 +111,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: #4D694E;
+  background: #20251F;
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
@@ -98,52 +123,222 @@
 }
 
 .btn-border-expand:hover {
-  color: #FFF3D5;
+  color: #FFFDF7;
 }
 
-/* Gentle CTA pulse keyframe */
-@keyframes cta-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.03); }
-}
-
-/* Floating geometric shapes in hero */
-.hero-geo-shape {
-  position: absolute;
-  pointer-events: none;
-  will-change: transform;
-}
-
-/* Magnetic button reset — prevents jank on rapid mouse leave */
+/* Magnetic button helper */
 .btn-magnetic {
   will-change: transform;
 }
 
-/* Terminal typing cursor blink */
+/* Terminal & HUD typing cursor blink */
 @keyframes blink-cursor {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
 }
 
-/* Floating animations for industrial telemetry background items */
-@keyframes telemetry-float-slow {
-  0% { transform: translate(0px, 0px) rotate(0deg); }
-  33% { transform: translate(25px, -35px) rotate(0.5deg); }
-  66% { transform: translate(-15px, 20px) rotate(-0.5deg); }
-  100% { transform: translate(0px, 0px) rotate(0deg); }
+/* Scanline sweep animation */
+@keyframes scan-sweep {
+  0% { top: 0%; opacity: 1; }
+  80% { top: 92%; opacity: 0.6; }
+  100% { top: 0%; opacity: 0; }
 }
 
-@keyframes telemetry-float-medium {
-  0% { transform: translate(0px, 0px) rotate(0deg); }
-  33% { transform: translate(-30px, 25px) rotate(-0.8deg); }
-  66% { transform: translate(20px, -30px) rotate(0.8deg); }
-  100% { transform: translate(0px, 0px) rotate(0deg); }
+/* Subtle laser sweep for scanner */
+@keyframes laser-sweep {
+  0% { transform: translateY(-50%); opacity: 0.3; }
+  50% { opacity: 0.8; }
+  100% { transform: translateY(150%); opacity: 0.3; }
 }
 
-.animate-telemetry-slow {
-  animation: telemetry-float-slow 28s ease-in-out infinite;
+/* ═══════════════════════════════════════════════════════
+   HERON-INSPIRED PROBLEM CARD WIREFRAME DRAW & DASH FLOW
+   ═══════════════════════════════════════════════════════ */
+@keyframes wireframe-dash-flow {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -24px;
+  }
 }
 
-.animate-telemetry-medium {
-  animation: telemetry-float-medium 22s ease-in-out infinite;
+@keyframes wireframe-draw-in {
+  0% {
+    stroke-dashoffset: 400;
+    opacity: 0.2;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
 }
+
+.wireframe-dash {
+  stroke-dasharray: 4 4;
+  animation: wireframe-dash-flow 1.8s linear infinite;
+}
+
+.feature-card:hover .wireframe-dash {
+  animation-duration: 0.8s;
+}
+
+.feature-card .wireframe-art {
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.feature-card:hover .wireframe-art {
+  transform: translateY(-4px) scale(1.03);
+}
+
+.feature-card .wireframe-plane-float {
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.feature-card:hover .wireframe-plane-float {
+  transform: translateY(-8px);
+}
+
+.feature-card .wireframe-angle-rotate {
+  transform-origin: 100px 90px;
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.feature-card:hover .wireframe-angle-rotate {
+  transform: rotate(-5deg);
+}
+
+.feature-card .wireframe-sphere-float {
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.feature-card:hover .wireframe-sphere-float {
+  transform: translateY(-10px) scale(1.06);
+}
+
+/* Subtle drafting blueprint grid reveal on card hover */
+.drafting-grid-hover {
+  background-image: radial-gradient(circle, rgba(32, 37, 31, 0.15) 1px, transparent 1px);
+  background-size: 16px 16px;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.feature-card:hover .drafting-grid-hover {
+  opacity: 1;
+}
+
+/* Card category title slide on hover */
+.feature-card-tag {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), color 0.3s ease;
+}
+
+.feature-card:hover .feature-card-tag {
+  transform: translateX(6px);
+  color: #E96C3F;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SEAMLESS INFINITE MARQUEE TICKER
+   ═══════════════════════════════════════════════════════ */
+@keyframes infinite-marquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+.animate-infinite-marquee {
+  display: flex;
+  flex-shrink: 0;
+  will-change: transform;
+  animation: infinite-marquee 45s linear infinite;
+}
+
+.animate-infinite-marquee-slow {
+  display: flex;
+  flex-shrink: 0;
+  will-change: transform;
+  animation: infinite-marquee 70s linear infinite;
+}
+
+/* ═══════════════════════════════════════════════════════
+   HEADER BRAND LOGO EYE BLINK ANIMATION
+   ═══════════════════════════════════════════════════════ */
+@keyframes eyeBlink {
+  0%, 12% {
+    transform: scaleY(1);
+  }
+  16% {
+    transform: scaleY(0.06);
+  }
+  20%, 78% {
+    transform: scaleY(1);
+  }
+  83% {
+    transform: scaleY(0.06);
+  }
+  88%, 100% {
+    transform: scaleY(1);
+  }
+}
+
+.group:hover .group-hover-eye-blink {
+  animation: eyeBlink 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  transform-origin: center center;
+}
+
+.eye-blink-ambient {
+  animation: eyeBlink 4.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  transform-origin: center center;
+}
+
+.group:hover .eye-blink-ambient {
+  animation-duration: 2s;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SMOOTH ARCHITECTURAL FLOW BUTTON HOVER
+   ═══════════════════════════════════════════════════════ */
+.nav-flow-fill {
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+  pointer-events: none;
+}
+
+.group:hover .nav-flow-fill {
+  transform: translateX(0);
+}
+
+/* ═══════════════════════════════════════════════════════
+   SMOOTH ARCHITECTURAL HEADER HIDE/REVEAL MOTION
+   ═══════════════════════════════════════════════════════ */
+.header-motion {
+  transition: 
+    transform 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity, filter;
+  transform-origin: center top;
+}
+
+.header-motion-hidden {
+  transform: translateY(-105%) scale(0.99);
+  opacity: 0;
+  filter: blur(4px);
+  pointer-events: none;
+}
+
+.header-motion-visible {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  filter: blur(0px);
+  pointer-events: auto;
+}
+
+
