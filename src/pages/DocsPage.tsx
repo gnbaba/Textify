@@ -33,20 +33,20 @@ export const DocsPage = () => {
   };
 
   return (
-    <main className="overflow-x-hidden w-full max-w-full relative min-h-[100dvh] bg-[#FFF3D5] text-[#4D694E] selection:bg-[#4D694E] selection:text-[#FFF3D5]">
+    <main className="overflow-x-hidden w-full max-w-full relative min-h-[100dvh] bg-[#F3EFE3] text-[#20251F] selection:bg-[#214C3A] selection:text-[#FFFDF7]">
       {/* Ambient overlays */}
       <div className="fixed inset-0 noise-bg pointer-events-none z-[1]" />
       <div className="fixed inset-0 halftone-overlay pointer-events-none z-[1]" />
 
       {/* Header bar */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#FFF3D5] border-b-2 border-[#4D694E]">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#FFFDF7] border-b border-[#20251F]/20">
         <nav className="max-w-[1400px] mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link to="/" className="p-1.5 border border-[#4D694E]/30 hover:border-[#4D694E] transition-colors flex items-center justify-center relative z-10" aria-label="Go back">
+            <Link to="/" className="p-1.5 border border-[#20251F]/20 hover:border-[#20251F] hover:bg-[#20251F]/5 transition-colors flex items-center justify-center relative z-10" aria-label="Go back">
               <ArrowLeft className="w-4 h-4" weight="bold" />
             </Link>
-            <span className="font-mono-industrial text-[11px] font-bold tracking-[0.1em] uppercase flex items-center gap-1.5">
-              TEXTIFY<span className="text-[#4D694E]/40">/</span>DOCS
+            <span className="font-mono-industrial text-[11px] font-bold tracking-[0.1em] uppercase flex items-center gap-1.5 text-[#20251F]">
+              TEXTIFY<span className="text-[#20251F]/30">/</span>DOCS
             </span>
           </div>
 
@@ -54,9 +54,9 @@ export const DocsPage = () => {
             <Link
               to="/app"
               replace
-              className="bg-[#4D694E] text-[#FFF3D5] px-4 py-1.5 font-mono-industrial text-[10px] font-bold tracking-[0.1em] uppercase hover:bg-[#3a4f3b] active:scale-[0.97] transition-all border-2 border-[#4D694E] relative z-10"
+              className="bg-[#214C3A] text-[#FFFDF7] px-4 py-1.5 font-mono-industrial text-[10px] font-bold tracking-[0.1em] uppercase hover:bg-[#183a2b] active:scale-[0.98] transition-all relative z-10 shadow-drafting-sm cursor-pointer"
             >
-              RUN WORKSPACE
+              RUN WORKSPACE &rarr;
             </Link>
           </div>
         </nav>
@@ -66,23 +66,23 @@ export const DocsPage = () => {
       <div className="max-w-[1400px] mx-auto pt-20 pb-16 px-6 relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         {/* Left Sidebar - Navigation Table of Contents */}
-        <aside className="lg:col-span-3 lg:sticky lg:top-24 h-fit border-2 border-[#4D694E] p-4 bg-[#FFF3D5] flex flex-col gap-2">
-          <div className="font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase text-[#4D694E]/40 border-b border-[#4D694E]/15 pb-2 mb-2 flex items-center gap-1.5">
-            <BookOpen className="w-3.5 h-3.5" /> INDEX LISTING
+        <aside className="lg:col-span-3 lg:sticky lg:top-20 h-fit border border-[#20251F]/20 p-4 bg-[#FFFDF7] flex flex-col gap-2 shadow-drafting-sm">
+          <div className="font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase text-[#20251F]/50 border-b border-[#20251F]/15 pb-2 mb-2 flex items-center gap-1.5">
+            <BookOpen className="w-3.5 h-3.5 text-[#214C3A]" /> INDEX LISTING
           </div>
           <div className="flex flex-col gap-1 font-mono-industrial text-[10px] font-bold tracking-[0.05em] uppercase">
             {SECTIONS.map((sec) => (
               <button
                 key={sec.id}
                 onClick={() => scrollToSection(sec.id)}
-                className={`w-full text-left px-3 py-2 border flex items-center justify-between transition-all ${
+                className={`w-full text-left px-3 py-2 border flex items-center justify-between transition-all cursor-pointer ${
                   activeSection === sec.id
-                    ? 'bg-[#4D694E] text-[#FFF3D5] border-[#4D694E]'
-                    : 'border-transparent hover:border-[#4D694E]/40 hover:bg-[#4D694E]/5'
+                    ? 'bg-[#214C3A] text-[#FFFDF7] border-[#214C3A] shadow-drafting-sm'
+                    : 'border-transparent text-[#20251F]/70 hover:border-[#20251F]/30 hover:bg-[#20251F]/5 hover:text-[#20251F]'
                 }`}
               >
                 <span>{sec.title}</span>
-                {activeSection === sec.id && <CaretRight className="w-3.5 h-3.5" weight="bold" />}
+                {activeSection === sec.id && <CaretRight className="w-3.5 h-3.5 text-[#D9E4CB]" weight="bold" />}
               </button>
             ))}
           </div>
@@ -92,56 +92,59 @@ export const DocsPage = () => {
         <div className="lg:col-span-9 space-y-12">
           
           {/* Main Title Header */}
-          <div className="border-b-2 border-[#4D694E] pb-6">
-            <div className="font-mono-industrial text-[10px] font-bold tracking-[0.1em] uppercase text-[#4D694E]/50 mb-3 flex items-center gap-2 flex-wrap">
-              <span>SYS.DOCS: READY</span>
-              <span className="text-[#4D694E]/20">///</span>
-              <span>VER 1.0.0</span>
-              <span className="text-[#4D694E]/20">///</span>
-              <span>MODULE / DOCS</span>
+          <div className="border-b border-[#20251F]/20 pb-6">
+            <div className="font-mono-industrial text-[10px] font-bold tracking-[0.1em] uppercase text-[#20251F]/50 mb-3 flex items-center gap-2 flex-wrap">
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-[#214C3A] rounded-full" />
+                SYS.DOCS: READY
+              </span>
+              <span className="text-[#20251F]/30">&bull;</span>
+              <span>VER 1.0.4-WASM</span>
+              <span className="text-[#20251F]/30">&bull;</span>
+              <span>MODULE / ARCHITECTURE</span>
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-[-0.03em] text-[#4D694E]">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-[-0.03em] text-[#20251F]">
               TECHNICAL<br />DOCUMENTATION.
             </h1>
-            <p className="mt-4 font-mono-industrial text-[11px] md:text-[12px] font-semibold tracking-[0.03em] leading-[1.6] uppercase text-[#4D694E]/65 max-w-3xl">
-              Complete reference and blueprint for the Textify client-side Document Processing app.
+            <p className="mt-4 font-mono-industrial text-[11px] md:text-[12px] font-semibold tracking-[0.03em] leading-[1.6] uppercase text-[#20251F]/65 max-w-3xl">
+              Complete architectural blueprint and specification for the Textify client-side Document Processing app.
             </p>
           </div>
 
           {/* Section 01: Overview */}
-          <section id="overview" className="border-b-2 border-[#4D694E] pb-8 space-y-4">
-            <div className="flex items-center gap-2 font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase text-[#4D694E]/40">
-              <Sparkle className="w-4 h-4 text-[#4D694E]/50" weight="bold" /> 01 / OVERVIEW & CORE FEATURES
+          <section id="overview" className="border-b border-[#20251F]/20 pb-8 space-y-4">
+            <div className="flex items-center gap-2 font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase text-[#20251F]/50">
+              <Sparkle className="w-4 h-4 text-[#E96C3F]" weight="bold" /> 01 / OVERVIEW & CORE FEATURES
             </div>
-            <h2 className="text-2xl font-black uppercase tracking-tight text-[#4D694E]">
+            <h2 className="text-2xl font-black uppercase tracking-tight text-[#20251F]">
               LOCAL TRANSLATION PIPELINE
             </h2>
-            <div className="font-mono-industrial text-[11px] font-semibold tracking-[0.02em] uppercase text-[#4D694E]/70 space-y-4 leading-[1.6]">
+            <div className="font-mono-industrial text-[11px] font-semibold tracking-[0.02em] uppercase text-[#20251F]/70 space-y-4 leading-[1.6]">
               <p>
                 Textify is an open-source Document Processing utility designed to ingest scanned documents (invoices, receipts, contracts, graphics), extract structured text using local OCR engines, validate outputs, and sync them securely.
               </p>
-              <div className="border-2 border-[#4D694E] p-4 bg-[#FFF3D5] space-y-3">
+              <div className="border border-[#20251F]/20 p-4 bg-[#FFFDF7] space-y-3 shadow-drafting-sm">
                 <div>
-                  <span className="text-[#4D694E] font-black">A. MULTI-SOURCE INGESTION</span>
-                  <p className="text-[10px] text-[#4D694E]/60 mt-1">
+                  <span className="text-[#20251F] font-black">A. MULTI-SOURCE INGESTION</span>
+                  <p className="text-[10px] text-[#20251F]/60 mt-1">
                     Accepts PNGs, JPEGs, TIFFs, and WebPs directly into the workspace container under a client-side layout constraint.
                   </p>
                 </div>
                 <div>
-                  <span className="text-[#4D694E] font-black">B. LOCAL OCR ENGINE</span>
-                  <p className="text-[10px] text-[#4D694E]/60 mt-1">
+                  <span className="text-[#20251F] font-black">B. LOCAL OCR ENGINE</span>
+                  <p className="text-[10px] text-[#20251F]/60 mt-1">
                     Runs Tesseract.js locally inside separate browser Web Workers. Character translation is fully isolated within the browser viewport.
                   </p>
                 </div>
                 <div>
-                  <span className="text-[#4D694E] font-black">C. REAL-TIME SESSION FEED & SORTING</span>
-                  <p className="text-[10px] text-[#4D694E]/60 mt-1">
+                  <span className="text-[#20251F] font-black">C. REAL-TIME SESSION FEED & SORTING</span>
+                  <p className="text-[10px] text-[#20251F]/60 mt-1">
                     Draggable blocks allow sorting, arranging, and compiling individual parsed text segments before final layout extraction.
                   </p>
                 </div>
                 <div>
-                  <span className="text-[#4D694E] font-black">D. CLOUD SYNCHRONIZATION</span>
-                  <p className="text-[10px] text-[#4D694E]/60 mt-1">
+                  <span className="text-[#20251F] font-black">D. CLOUD SYNCHRONIZATION</span>
+                  <p className="text-[10px] text-[#20251F]/60 mt-1">
                     Allows users to link their private workspaces to Firebase Cloud Firestore for synchronized session feeds.
                   </p>
                 </div>
@@ -150,22 +153,22 @@ export const DocsPage = () => {
           </section>
 
           {/* Section 02: Architecture */}
-          <section id="architecture" className="border-b-2 border-[#4D694E] pb-8 space-y-4">
-            <div className="flex items-center gap-2 font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase text-[#4D694E]/40">
-              <Cpu className="w-4 h-4 text-[#4D694E]/50" weight="bold" /> 02 / WORKSPACE STRUCTURE
+          <section id="architecture" className="border-b border-[#20251F]/20 pb-8 space-y-4">
+            <div className="flex items-center gap-2 font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase text-[#20251F]/50">
+              <Cpu className="w-4 h-4 text-[#214C3A]" weight="bold" /> 02 / WORKSPACE STRUCTURE
             </div>
-            <h2 className="text-2xl font-black uppercase tracking-tight text-[#4D694E]">
+            <h2 className="text-2xl font-black uppercase tracking-tight text-[#20251F]">
               MODULAR SOURCE DIRECTORY
             </h2>
-            <div className="font-mono-industrial text-[11px] font-semibold tracking-[0.02em] uppercase text-[#4D694E]/70 space-y-4 leading-[1.6]">
+            <div className="font-mono-industrial text-[11px] font-semibold tracking-[0.02em] uppercase text-[#20251F]/70 space-y-4 leading-[1.6]">
               <p>
                 Textify is built using a features-oriented modular architecture. It encapsulates configurations, DTOs, contexts, and helper wrappers:
               </p>
               
               {/* Directory Map */}
-              <div className="bg-[#FFF3D5] border-2 border-[#4D694E] p-4 font-mono-industrial text-[10px] text-[#4D694E] leading-relaxed shadow-[4px_4px_0px_0px_#4D694E]">
-                <div className="flex items-center gap-2 mb-2 pb-1 border-b border-[#4D694E]/10 font-bold uppercase">
-                  <FolderSimple className="w-4 h-4" /> Source Directory Map
+              <div className="bg-[#FFFDF7] border border-[#20251F]/20 p-4 font-mono-industrial text-[10px] text-[#20251F] leading-relaxed shadow-drafting-sm">
+                <div className="flex items-center gap-2 mb-2 pb-1 border-b border-[#20251F]/10 font-bold uppercase text-[#20251F]/80">
+                  <FolderSimple className="w-4 h-4 text-[#214C3A]" /> Source Directory Map
                 </div>
                 <div>src/</div>
                 <div className="pl-4">├── app/ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;# Routing and global css files</div>
@@ -182,7 +185,7 @@ export const DocsPage = () => {
 
               {/* Service Boundaries */}
               <div className="space-y-2">
-                <span className="font-black text-[#4D694E] uppercase">System Request Lifecycle & Boundaries</span>
+                <span className="font-black text-[#20251F] uppercase">System Request Lifecycle & Boundaries</span>
                 <p>
                   1. **Ingest**: Visual substrate (document image) dropped into Dropzone container.
                 </p>
@@ -200,42 +203,42 @@ export const DocsPage = () => {
           </section>
 
           {/* Section 03: Database/Firestore */}
-          <section id="database" className="border-b-2 border-[#4D694E] pb-8 space-y-4">
-            <div className="flex items-center gap-2 font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase text-[#4D694E]/40">
-              <ShieldCheck className="w-4 h-4 text-[#4D694E]/50" weight="bold" /> 03 / FIRESTORE SCHEMAS & SECURITIES
+          <section id="database" className="border-b border-[#20251F]/20 pb-8 space-y-4">
+            <div className="flex items-center gap-2 font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase text-[#20251F]/50">
+              <ShieldCheck className="w-4 h-4 text-[#214C3A]" weight="bold" /> 03 / FIRESTORE SCHEMAS & SECURITIES
             </div>
-            <h2 className="text-2xl font-black uppercase tracking-tight text-[#4D694E]">
+            <h2 className="text-2xl font-black uppercase tracking-tight text-[#20251F]">
               STRUCTURED CLOUD STORAGE
             </h2>
-            <div className="font-mono-industrial text-[11px] font-semibold tracking-[0.02em] uppercase text-[#4D694E]/70 space-y-4 leading-[1.6]">
+            <div className="font-mono-industrial text-[11px] font-semibold tracking-[0.02em] uppercase text-[#20251F]/70 space-y-4 leading-[1.6]">
               <p>
                 Data synchronization utilizes Google Cloud Firestore. Multi-tenant isolation is enforced at both application levels and cloud rules.
               </p>
               
               {/* Firestore Collections Table */}
               <div className="overflow-x-auto">
-                <table className="w-full text-left font-mono-industrial text-[10px] border-collapse border-2 border-[#4D694E]">
+                <table className="w-full text-left font-mono-industrial text-[10px] border-collapse border border-[#20251F]/20 shadow-drafting-sm">
                   <thead>
-                    <tr className="bg-[#4D694E] text-[#FFF3D5] uppercase font-bold border-b-2 border-[#4D694E]">
-                      <th className="p-3 border-r border-[#4D694E]">Collection / Path</th>
-                      <th className="p-3 border-r border-[#4D694E]">Constraints</th>
+                    <tr className="bg-[#20251F] text-[#FFFDF7] uppercase font-bold">
+                      <th className="p-3 border-r border-[#20251F]/40">Collection / Path</th>
+                      <th className="p-3 border-r border-[#20251F]/40">Constraints</th>
                       <th className="p-3">Primary Usage</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-[#FFF3D5] text-[#4D694E] uppercase">
-                    <tr className="border-b border-[#4D694E]">
-                      <td className="p-3 border-r border-[#4D694E] font-bold">{"users / {uid}"}</td>
-                      <td className="p-3 border-r border-[#4D694E]">uid (FK)</td>
+                  <tbody className="bg-[#FFFDF7] text-[#20251F] uppercase">
+                    <tr className="border-b border-[#20251F]/15">
+                      <td className="p-3 border-r border-[#20251F]/15 font-bold">{"users / {uid}"}</td>
+                      <td className="p-3 border-r border-[#20251F]/15">uid (FK)</td>
                       <td className="p-3">User profiles and auth sync metadata.</td>
                     </tr>
-                    <tr className="border-b border-[#4D694E]">
-                      <td className="p-3 border-r border-[#4D694E] font-bold">{"history / {sessionId}"}</td>
-                      <td className="p-3 border-r border-[#4D694E]">sessionId (UUID), userId (FK)</td>
+                    <tr className="border-b border-[#20251F]/15">
+                      <td className="p-3 border-r border-[#20251F]/15 font-bold">{"history / {sessionId}"}</td>
+                      <td className="p-3 border-r border-[#20251F]/15">sessionId (UUID), userId (FK)</td>
                       <td className="p-3">Scanned history session headers.</td>
                     </tr>
                     <tr>
-                      <td className="p-3 border-r border-[#4D694E] font-bold">{"history / {sessionId} / blocks"}</td>
-                      <td className="p-3 border-r border-[#4D694E]">sorted_index (NUM)</td>
+                      <td className="p-3 border-r border-[#20251F]/15 font-bold">{"history / {sessionId} / blocks"}</td>
+                      <td className="p-3 border-r border-[#20251F]/15">sorted_index (NUM)</td>
                       <td className="p-3">Individual parsed text segments inside a session.</td>
                     </tr>
                   </tbody>
@@ -244,11 +247,11 @@ export const DocsPage = () => {
 
               {/* Firestore Transaction Safe Sync Example */}
               <div>
-                <span className="font-black text-[#4D694E] uppercase block mb-2">Atomic Block Sync Transaction (TypeScript / Firestore)</span>
+                <span className="font-black text-[#20251F] uppercase block mb-2">Atomic Block Sync Transaction (TypeScript / Firestore)</span>
                 <p className="mb-3">
                   This transaction-safe update coordinates individual block order mappings inside Firestore atomic batches:
                 </p>
-                <div className="bg-[#FFF3D5] border-2 border-[#4D694E] p-4 text-[9px] md:text-[10px] font-mono-industrial text-[#4D694E] overflow-x-auto whitespace-pre shadow-[4px_4px_0px_0px_#4D694E]">
+                <div className="bg-[#FFFDF7] border border-[#20251F]/20 p-4 text-[9px] md:text-[10px] font-mono-industrial text-[#20251F] overflow-x-auto whitespace-pre shadow-drafting-sm">
 {`import { writeBatch, doc, collection } from "firebase/firestore";
 import { db } from "../config/firebase";
 
@@ -280,29 +283,29 @@ export async function syncSortedBlocks(
           </section>
 
           {/* Section 04: SOLID Coding Standards */}
-          <section id="solid" className="border-b-2 border-[#4D694E] pb-8 space-y-4">
-            <div className="flex items-center gap-2 font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase text-[#4D694E]/40">
-              <Cpu className="w-4 h-4 text-[#4D694E]/50" weight="bold" /> 04 / SOLID CODING STANDARDS
+          <section id="solid" className="border-b border-[#20251F]/20 pb-8 space-y-4">
+            <div className="flex items-center gap-2 font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase text-[#20251F]/50">
+              <Cpu className="w-4 h-4 text-[#214C3A]" weight="bold" /> 04 / SOLID CODING STANDARDS
             </div>
-            <h2 className="text-2xl font-black uppercase tracking-tight text-[#4D694E]">
+            <h2 className="text-2xl font-black uppercase tracking-tight text-[#20251F]">
               STRICT IMPLEMENTATION FLOW
             </h2>
-            <div className="font-mono-industrial text-[11px] font-semibold tracking-[0.02em] uppercase text-[#4D694E]/70 space-y-4 leading-[1.6]">
+            <div className="font-mono-industrial text-[11px] font-semibold tracking-[0.02em] uppercase text-[#20251F]/70 space-y-4 leading-[1.6]">
               <p>
                 Textify follows strict layer-decoupling principles. Data is bound to boundaries using explicit flow constraints:
               </p>
               
-              <div className="bg-[#FFF3D5] border-2 border-[#4D694E] p-4 text-center font-black uppercase text-[#4D694E] shadow-[4px_4px_0px_0px_#4D694E]">
+              <div className="bg-[#FFFDF7] border border-[#20251F]/20 p-4 text-center font-black uppercase text-[#20251F] shadow-drafting-sm">
                 Route &rarr; Controller &rarr; Service &rarr; Repository
               </div>
 
               <div className="space-y-4 mt-4">
                 <div>
-                  <span className="font-black text-[#4D694E] uppercase">Abstract BaseRepository Definition</span>
-                  <p className="text-[10px] text-[#4D694E]/60 mt-1">
+                  <span className="font-black text-[#20251F] uppercase">Abstract BaseRepository Definition</span>
+                  <p className="text-[10px] text-[#20251F]/60 mt-1">
                     Enforces standard CRUD patterns across local storage structures and database connectors:
                   </p>
-                  <div className="bg-[#FFF3D5] border-2 border-[#4D694E] p-4 text-[9px] md:text-[10px] font-mono-industrial text-[#4D694E] overflow-x-auto whitespace-pre mt-2 shadow-[4px_4px_0px_0px_#4D694E]">
+                  <div className="bg-[#FFFDF7] border border-[#20251F]/20 p-4 text-[9px] md:text-[10px] font-mono-industrial text-[#20251F] overflow-x-auto whitespace-pre mt-2 shadow-drafting-sm">
 {`abstract class BaseRepository<T> {
   protected abstract collectionName: string;
   
@@ -315,11 +318,11 @@ export async function syncSortedBlocks(
                 </div>
 
                 <div>
-                  <span className="font-black text-[#4D694E] uppercase">Service Constructor DI Pattern</span>
-                  <p className="text-[10px] text-[#4D694E]/60 mt-1">
+                  <span className="font-black text-[#20251F] uppercase">Service Constructor DI Pattern</span>
+                  <p className="text-[10px] text-[#20251F]/60 mt-1">
                     Services utilize dependency injection to guarantee loose coupling and mockable unit test sandboxing:
                   </p>
-                  <div className="bg-[#FFF3D5] border-2 border-[#4D694E] p-4 text-[9px] md:text-[10px] font-mono-industrial text-[#4D694E] overflow-x-auto whitespace-pre mt-2 shadow-[4px_4px_0px_0px_#4D694E]">
+                  <div className="bg-[#FFFDF7] border border-[#20251F]/20 p-4 text-[9px] md:text-[10px] font-mono-industrial text-[#20251F] overflow-x-auto whitespace-pre mt-2 shadow-drafting-sm">
 {`class OcrService implements IOcrService {
   constructor(
     private readonly worker: Tesseract.Worker,
@@ -341,20 +344,20 @@ export async function syncSortedBlocks(
 
           {/* Section 05: Developer Notes */}
           <section id="developer" className="pb-8 space-y-4">
-            <div className="flex items-center gap-2 font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase text-[#4D694E]/40">
-              <Warning className="w-4 h-4 text-[#4D694E]/50" weight="bold" /> 05 / DEV LOGS & DISCLAIMER
+            <div className="flex items-center gap-2 font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase text-[#20251F]/50">
+              <Warning className="w-4 h-4 text-[#E96C3F]" weight="bold" /> 05 / DEV LOGS & DISCLAIMER
             </div>
-            <h2 className="text-2xl font-black uppercase tracking-tight text-[#4D694E]">
+            <h2 className="text-2xl font-black uppercase tracking-tight text-[#20251F]">
               DEVELOPMENT REFLECTION INDEX
             </h2>
-            <div className="font-mono-industrial text-[11px] font-semibold tracking-[0.02em] uppercase text-[#4D694E]/70 space-y-4 leading-[1.6]">
+            <div className="font-mono-industrial text-[11px] font-semibold tracking-[0.02em] uppercase text-[#20251F]/70 space-y-4 leading-[1.6]">
               <p>
                 Textify has been built as a functional open-source document scraping application and as a core learning pipeline in my personal development journey as a software developer. Writing this utility has allowed me to deep-dive into client-side async engines, client-side WebAssembly Web Workers, data synchronizations with Firestore collections, and modular SOLID structure systems.
               </p>
               
-              <div className="border-2 border-dashed border-[#4D694E]/40 p-4 bg-[#4D694E]/5">
-                <span className="font-black text-[#4D694E] uppercase">Project Maturity & Execution Note</span>
-                <p className="text-[10px] text-[#4D694E]/65 uppercase mt-1.5 leading-relaxed">
+              <div className="border border-dashed border-[#20251F]/30 p-4 bg-[#FFFDF7]">
+                <span className="font-black text-[#20251F] uppercase">Project Maturity & Execution Note</span>
+                <p className="text-[10px] text-[#20251F]/65 uppercase mt-1.5 leading-relaxed">
                   As this project is a continuous learning process, it should be noted that some structural edge cases, OCR parsing offsets, or environment-specific latency gaps may occur during runtime. I am committed to iteratively debugging the code, optimizing the Web Worker lifecycles, and improving overall stability as I expand my engineering capabilities.
                 </p>
               </div>
@@ -368,15 +371,15 @@ export async function syncSortedBlocks(
                   href="https://github.com/gnbaba/Textify"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-[#4D694E] text-[#FFF3D5] px-5 py-2.5 font-mono-industrial text-[10px] font-bold tracking-[0.1em] uppercase hover:bg-[#3a4f3b] active:scale-[0.97] transition-all border-2 border-[#4D694E] flex items-center gap-1.5"
+                  className="bg-[#214C3A] text-[#FFFDF7] px-5 py-2.5 font-mono-industrial text-[10px] font-bold tracking-[0.1em] uppercase hover:bg-[#183a2b] active:scale-[0.98] transition-all flex items-center gap-1.5 shadow-drafting-sm cursor-pointer"
                 >
                   <GithubLogo className="w-4 h-4" weight="bold" /> Github Repo
                 </a>
                 <Link
                   to="/"
-                  className="border-2 border-[#4D694E] text-[#4D694E] px-5 py-2.5 font-mono-industrial text-[10px] font-bold tracking-[0.1em] uppercase hover:bg-[#4D694E] hover:text-[#FFF3D5] active:scale-[0.97] transition-all"
+                  className="border border-[#20251F]/30 text-[#20251F] px-5 py-2.5 font-mono-industrial text-[10px] font-bold tracking-[0.1em] uppercase hover:bg-[#20251F]/5 active:scale-[0.98] transition-all cursor-pointer"
                 >
-                  Back to landing
+                  &larr; Back to Landing
                 </Link>
               </div>
             </div>
@@ -386,13 +389,13 @@ export async function syncSortedBlocks(
       </div>
 
       {/* Footer */}
-      <footer className="w-full bg-[#FFF3D5] border-t-2 border-[#4D694E]/30 py-8 relative z-10">
-        <div className="max-w-[1400px] mx-auto px-6 grid grid-cols-1 md:grid-cols-12 gap-6 items-center font-mono-industrial text-[10px] font-bold tracking-[0.1em] uppercase text-[#4D694E]/45">
+      <footer className="w-full bg-[#F3EFE3] border-t border-[#20251F]/20 py-8 relative z-10">
+        <div className="max-w-[1400px] mx-auto px-6 grid grid-cols-1 md:grid-cols-12 gap-6 items-center font-mono-industrial text-[10px] font-bold tracking-[0.1em] uppercase text-[#20251F]/50">
           <div className="md:col-span-6">
-            &copy; {new Date().getFullYear()} TEXTIFY INC. /// DEVELOPER DOCUMENTATION PORTAL.
+            &copy; {new Date().getFullYear()} TEXTIFY INC. &bull; DEVELOPER DOCUMENTATION PORTAL.
           </div>
           <div className="md:col-span-6 text-left md:text-right">
-            BUILT BY @GNBABA /// PORTAL REV 1.0.0
+            BUILT BY @GNBABA &bull; PORTAL REV 1.0.4-WASM
           </div>
         </div>
       </footer>
