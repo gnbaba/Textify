@@ -1,76 +1,85 @@
-const CACHE_NAME = 'textify-cache-v3';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/favicon.png',
-  '/New_Textify.png',
-  '/ocr-assets/worker.min.js',
-  '/ocr-assets/eng.traineddata.gz',
-  '/ocr-assets/tesseract-core-lstm.wasm',
-  '/ocr-assets/tesseract-core-lstm.wasm.js',
-  '/ocr-assets/tesseract-core-simd-lstm.wasm',
-  '/ocr-assets/tesseract-core-simd-lstm.wasm.js',
-  '/ocr-assets/tesseract-core-simd.wasm',
-  '/ocr-assets/tesseract-core-simd.wasm.js',
-  '/ocr-assets/tesseract-core.wasm',
-  '/ocr-assets/tesseract-core.wasm.js'
-];
+const SHELL_CACHE = 'textify-shell-v4';
+const OCR_ASSET_CACHE = 'textify-ocr-assets-v1';
+const CACHE_ALLOWLIST = [SHELL_CACHE, OCR_ASSET_CACHE];
+const ASSETS_TO_CACHE = ['/', '/favicon.png', '/New_Textify.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      // Force cache installation
-      return cache.addAll(ASSETS_TO_CACHE);
-    }).then(() => {
-      return self.skipWaiting();
-    })
+    caches
+      .open(SHELL_CACHE)
+      .then((cache) => cache.addAll(ASSETS_TO_CACHE))
+      .then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
-            return caches.delete(cache);
-          }
-        })
-      );
-    }).then(() => {
-      return self.clients.claim();
-    })
+    caches
+      .keys()
+      .then((cacheNames) =>
+        Promise.all(
+          cacheNames
+            .filter((cacheName) => !CACHE_ALLOWLIST.includes(cacheName))
+            .map((cacheName) => caches.delete(cacheName))
+        )
+      )
+      .then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests
-  if (event.request.method !== 'GET') return;
-
   const url = new URL(event.request.url);
 
-  // Avoid intercepting Firebase Auth, Firestore cloud endpoints, or external APIs
   if (url.origin !== self.location.origin) return;
+  if (event.request.method !== 'GET') return;
+  if (url.pathname.startsWith('/api/')) return;
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(async () => {
+        const fallback = await caches.match('/');
+        return fallback || Response.error();
+      })
+    );
+    return;
+  }
 
-      return fetch(event.request).then((networkResponse) => {
-        // Cache dynamic assets (compiled JS/CSS from Vite) and root files on the fly
-        if (
-          networkResponse.status === 200 &&
-          (url.pathname.includes('/assets/') || url.pathname === '/' || url.pathname === '/docs')
-        ) {
-          const cacheCopy = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, cacheCopy);
-          });
-        }
-        return networkResponse;
-      });
-    })
-  );
+  if (url.pathname.startsWith('/ocr-assets/')) {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        if (cachedResponse) return cachedResponse;
+
+        return fetch(event.request).then(async (networkResponse) => {
+          const contentType = networkResponse.headers.get('content-type') || '';
+
+          if (networkResponse.ok && !contentType.includes('text/html')) {
+            const cache = await caches.open(OCR_ASSET_CACHE);
+            await cache.put(event.request, networkResponse.clone());
+          }
+
+          return networkResponse;
+        });
+      })
+    );
+    return;
+  }
+
+  if (url.pathname.startsWith('/assets/')) {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        if (cachedResponse) return cachedResponse;
+
+        return fetch(event.request).then(async (networkResponse) => {
+          const contentType = networkResponse.headers.get('content-type') || '';
+
+          if (networkResponse.ok && !contentType.includes('text/html')) {
+            const cache = await caches.open(SHELL_CACHE);
+            await cache.put(event.request, networkResponse.clone());
+          }
+
+          return networkResponse;
+        });
+      })
+    );
+  }
 });

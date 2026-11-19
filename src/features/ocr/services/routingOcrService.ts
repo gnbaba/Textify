@@ -1,6 +1,6 @@
-import type { IOcrService, ExtractionMode, OcrOptions } from '../types/ocrTypes';
-import { tesseractOcrService } from './tesseractOcrService';
+import type { ExtractionMode, IOcrService, OcrOptions } from '../types/ocrTypes';
 import { geminiOcrService } from './geminiOcrService';
+import { tesseractOcrService } from './tesseractOcrService';
 
 class RoutingOcrService implements IOcrService {
   private static instance: RoutingOcrService;
@@ -23,11 +23,9 @@ class RoutingOcrService implements IOcrService {
     // 1. Configure automatic background parameters based on extraction mode
     const autoOptions: OcrOptions = {
       ...options,
-      language: 'eng+spa', // Combined dictionary to handle English/Spanish text automatically
+      language: options?.language ?? 'eng',
       psm: mode === 'document' ? 'auto' : 'single_block',
       preset: mode === 'document' ? 'document' : 'original',
-      brightness: 80,
-      contrast: 200,
       thresholdMode: 'adaptive',
       deskew: mode === 'document',
     };
@@ -46,15 +44,20 @@ class RoutingOcrService implements IOcrService {
     // 3. Evaluate if we need to fall back to Gemini AI
     const hasGeminiKey = !!import.meta.env.VITE_GEMINI_API_KEY;
     const isLocalEmpty = !localResult || !localResult.text || localResult.text.trim() === '';
-    const isLocalLowConfidence = localResult && localResult.confidence !== undefined && localResult.confidence < 60;
+    const isLocalLowConfidence =
+      localResult && localResult.confidence !== undefined && localResult.confidence < 60;
 
     if (hasGeminiKey && (localError || isLocalEmpty || isLocalLowConfidence)) {
       console.log(
         `Triggering Gemini AI fallback. Reason: ${
-          localError ? 'Tesseract threw error' : isLocalEmpty ? 'Tesseract returned empty' : `Low Tesseract confidence (${localResult?.confidence}%)`
+          localError
+            ? 'Tesseract threw error'
+            : isLocalEmpty
+              ? 'Tesseract returned empty'
+              : `Low Tesseract confidence (${localResult?.confidence}%)`
         }`
       );
-      
+
       try {
         // Run vision OCR using Gemini API
         return await geminiOcrService.extractText(file, mode, autoOptions, onProgress);

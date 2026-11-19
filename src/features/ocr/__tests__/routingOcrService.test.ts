@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { geminiOcrService } from '../services/geminiOcrService';
 import { routingOcrService } from '../services/routingOcrService';
 import { tesseractOcrService } from '../services/tesseractOcrService';
-import { geminiOcrService } from '../services/geminiOcrService';
 
 vi.mock('../services/tesseractOcrService', () => ({
   tesseractOcrService: {
@@ -28,7 +28,10 @@ describe('RoutingOcrService', () => {
   });
 
   it('should run tesseractOcrService first with pre-configured automatic parameters', async () => {
-    vi.mocked(tesseractOcrService.extractText).mockResolvedValueOnce({ text: 'local text', confidence: 85 });
+    vi.mocked(tesseractOcrService.extractText).mockResolvedValueOnce({
+      text: 'local text',
+      confidence: 85,
+    });
 
     const result = await routingOcrService.extractText(mockFile, 'document');
 
@@ -38,21 +41,24 @@ describe('RoutingOcrService', () => {
       mockFile,
       'document',
       expect.objectContaining({
-        language: 'eng+spa',
+        language: 'eng',
         psm: 'auto',
         preset: 'document',
-        brightness: 80,
-        contrast: 200,
         thresholdMode: 'adaptive',
         deskew: true,
       }),
       undefined
     );
+    const passedOptions = vi.mocked(tesseractOcrService.extractText).mock.calls[0][2];
+    expect(passedOptions).not.toHaveProperty('brightness');
+    expect(passedOptions).not.toHaveProperty('contrast');
     expect(geminiOcrService.extractText).not.toHaveBeenCalled();
   });
 
   it('should fallback to geminiOcrService when tesseractOcrService throws an error', async () => {
-    vi.mocked(tesseractOcrService.extractText).mockRejectedValueOnce(new Error('Tesseract crashed'));
+    vi.mocked(tesseractOcrService.extractText).mockRejectedValueOnce(
+      new Error('Tesseract crashed')
+    );
     vi.mocked(geminiOcrService.extractText).mockResolvedValueOnce({ text: 'gemini fallback text' });
 
     const result = await routingOcrService.extractText(mockFile, 'document');
@@ -63,7 +69,10 @@ describe('RoutingOcrService', () => {
   });
 
   it('should fallback to geminiOcrService when tesseractOcrService returns empty text', async () => {
-    vi.mocked(tesseractOcrService.extractText).mockResolvedValueOnce({ text: '   ', confidence: 90 });
+    vi.mocked(tesseractOcrService.extractText).mockResolvedValueOnce({
+      text: '   ',
+      confidence: 90,
+    });
     vi.mocked(geminiOcrService.extractText).mockResolvedValueOnce({ text: 'gemini fallback text' });
 
     const result = await routingOcrService.extractText(mockFile, 'document');
@@ -74,7 +83,10 @@ describe('RoutingOcrService', () => {
   });
 
   it('should fallback to geminiOcrService when tesseractOcrService returns low confidence score', async () => {
-    vi.mocked(tesseractOcrService.extractText).mockResolvedValueOnce({ text: 'poor text quality', confidence: 45 });
+    vi.mocked(tesseractOcrService.extractText).mockResolvedValueOnce({
+      text: 'poor text quality',
+      confidence: 45,
+    });
     vi.mocked(geminiOcrService.extractText).mockResolvedValueOnce({ text: 'gemini fallback text' });
 
     const result = await routingOcrService.extractText(mockFile, 'document');
