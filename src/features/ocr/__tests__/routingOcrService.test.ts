@@ -95,4 +95,16 @@ describe('RoutingOcrService', () => {
     expect(tesseractOcrService.extractText).toHaveBeenCalledTimes(1);
     expect(geminiOcrService.extractText).toHaveBeenCalledTimes(1);
   });
+
+  it('should throw error when local OCR returns empty text and Gemini key is missing', async () => {
+    vi.stubEnv('VITE_GEMINI_API_KEY', '');
+    vi.mocked(tesseractOcrService.extractText).mockResolvedValueOnce({
+      text: '   ',
+      confidence: 90,
+    });
+
+    await expect(routingOcrService.extractText(mockFile, 'document')).rejects.toThrow(
+      'No readable text detected in selected region.'
+    );
+  });
 });

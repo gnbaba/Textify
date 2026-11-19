@@ -69,10 +69,22 @@ class TesseractOcrService implements IOcrService {
     this.currentOnProgress = onProgress;
 
     try {
+      if (options?.isStale?.()) {
+        return { text: '' };
+      }
+
       const lang = options?.language || 'eng';
       const worker = await this.getWorker(lang);
 
+      if (options?.isStale?.()) {
+        return { text: '' };
+      }
+
       const canvas = await preprocessCanvasImage(file);
+
+      if (options?.isStale?.()) {
+        return { text: '' };
+      }
 
       let pagesegMode = mode === 'graphic' ? PSM.SINGLE_BLOCK : PSM.AUTO;
       if (options?.psm) {
@@ -100,12 +112,62 @@ class TesseractOcrService implements IOcrService {
       });
 
       const { data } = await worker.recognize(canvas);
+      let bestText = data.text || '';
+      let bestConfidence = data.confidence;
+
+      if (options?.isStale?.()) {
+        return { text: '' };
+      }
+
+      // Alternate page segmentation fallback for sparse or empty auto-results on large images
+      const nonWhitespaceLength = bestText.trim().replace(/\s+/g, '').length;
+      const isSparse = nonWhitespaceLength < 15;
+      const isLargeImage = canvas.width > 300 && canvas.height > 300;
+
+      if (
+        mode === 'document' &&
+        pagesegMode === PSM.AUTO &&
+        isLargeImage &&
+        isSparse &&
+        !options?.isStale?.()
+      ) {
+        await worker.setParameters({
+          tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
+          user_defined_dpi: '300',
+        });
+
+        const pass2Result = await worker.recognize(canvas);
+        if (!options?.isStale?.()) {
+          const pass2Text = pass2Result.data.text || '';
+          const pass2NonWhitespaceLength = pass2Text.trim().replace(/\s+/g, '').length;
+
+          // Select candidate by text completeness rather than confidence alone
+          if (pass2NonWhitespaceLength > nonWhitespaceLength) {
+            bestText = pass2Text;
+            bestConfidence = pass2Result.data.confidence;
+          }
+        }
+      }
+
+      if (options?.isStale?.()) {
+        return { text: '' };
+      }
+
+      if (bestText.trim().length === 0) {
+        throw new Error('No readable text detected in selected region.');
+      }
 
       return {
-        text: data.text || '',
-        confidence: data.confidence,
+        text: bestText,
+        confidence: bestConfidence,
       };
     } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === 'No readable text detected in selected region.'
+      ) {
+        throw error;
+      }
       console.error('OCR Extraction Error:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`OCR processing failed: ${errorMessage}`);

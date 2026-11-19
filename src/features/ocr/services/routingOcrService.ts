@@ -77,7 +77,7 @@ class RoutingOcrService implements IOcrService {
     }
 
     if (isLocalEmpty) {
-      throw new Error('No readable text detected. Please try a clearer photo or different mode.');
+      throw new Error('No readable text detected in selected region.');
     }
 
     return localResult!;

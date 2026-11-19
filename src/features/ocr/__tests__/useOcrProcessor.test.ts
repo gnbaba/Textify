@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useOcrProcessor } from '../hooks/useOcrProcessor';
 import type { IOcrService } from '../types/ocrTypes';
 
@@ -23,7 +23,7 @@ describe('useOcrProcessor', () => {
 
   it('should transition from idle to loading to success on successful OCR', async () => {
     const expectedText = 'Structured Extracted Text';
-    
+
     // Mock the service to return the object shape our hook expects
     vi.mocked(mockOcrService.extractText).mockResolvedValueOnce({ text: expectedText });
 
@@ -41,9 +41,11 @@ describe('useOcrProcessor', () => {
 
     expect(result.current.text).toBe(expectedText);
     expect(mockOcrService.extractText).toHaveBeenCalledWith(
-      mockFile, 
-      'document', 
-      undefined,
+      mockFile,
+      'document',
+      expect.objectContaining({
+        isStale: expect.any(Function),
+      }),
       expect.any(Function)
     );
     expect(mockOcrService.extractText).toHaveBeenCalledTimes(1);
@@ -65,5 +67,52 @@ describe('useOcrProcessor', () => {
     });
 
     expect(result.current.text).toBe('');
+  });
+
+  it('should transition to error state if OCR service returns empty text', async () => {
+    vi.mocked(mockOcrService.extractText).mockResolvedValueOnce({ text: '   ' });
+
+    const { result } = renderHook(() => useOcrProcessor(mockOcrService));
+
+    act(() => {
+      result.current.process(mockFile);
+    });
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('error');
+    });
+
+    expect(result.current.error).toBe('No readable text detected in selected region.');
+  });
+
+  it('should ignore outdated responses if a newer request was dispatched', async () => {
+    let resolveFirst: ((val: { text: string }) => void) | null = null;
+    vi.mocked(mockOcrService.extractText)
+      .mockImplementationOnce(
+        () =>
+          new Promise((res) => {
+            resolveFirst = res;
+          })
+      )
+      .mockResolvedValueOnce({ text: 'Second Request Text' });
+
+    const { result } = renderHook(() => useOcrProcessor(mockOcrService));
+
+    act(() => {
+      result.current.process(mockFile);
+    });
+    act(() => {
+      result.current.process(mockFile);
+    });
+
+    await waitFor(() => {
+      expect(result.current.text).toBe('Second Request Text');
+    });
+
+    act(() => {
+      resolveFirst?.({ text: 'First Stale Text' });
+    });
+
+    expect(result.current.text).toBe('Second Request Text');
   });
 });
