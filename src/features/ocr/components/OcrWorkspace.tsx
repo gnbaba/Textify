@@ -22,11 +22,7 @@ import { db } from '../../../config/firebase';
 import { useWorkspace } from '../../../shared/context/WorkspaceContext';
 import { LoginModal } from '../../auth/components/LoginModal';
 import { useAuth } from '../../auth/hooks/useAuth';
-import {
-  type CloudDocument,
-  type ExtractionBlock,
-  useCloudHistory,
-} from '../../history/hooks/useCloudHistory';
+import { type CloudDocument, type ExtractionBlock } from '../../history/hooks/useCloudHistory';
 import { useOcrProcessor } from '../hooks/useOcrProcessor';
 import { routingOcrService } from '../services/routingOcrService';
 import type { ExtractionMode } from '../types/ocrTypes';
@@ -124,9 +120,32 @@ const mergeExtractionBlocks = (
 
 export const OcrWorkspace: React.FC = () => {
   const { user } = useAuth();
-  const { documents, generateDocumentId, ensureDocument, saveBlock } = useCloudHistory(user?.uid);
+  const {
+    activeDocument,
+    setActiveDocument,
+    documents,
+    generateDocumentId,
+    ensureDocument,
+    saveBlock,
+    reorderBlocks,
+  } = useWorkspace();
   const { status, progress, process } = useOcrProcessor(routingOcrService);
-  const { activeDocument, setActiveDocument } = useWorkspace();
+
+  const prevUidRef = useRef(user?.uid);
+  useEffect(() => {
+    const prevUid = prevUidRef.current;
+    const currUid = user?.uid;
+    if (prevUid && prevUid !== currUid) {
+      setPendingBlocks([]);
+      pendingBlocksRef.current = [];
+      setDraftDocId(null);
+      draftDocIdRef.current = null;
+      setActiveImageSrc(null);
+      setSelectedFile(null);
+      setWorkspaceError(null);
+    }
+    prevUidRef.current = currUid;
+  }, [user?.uid]);
 
   const [mode, setMode] = useState<ExtractionMode>('document');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -867,11 +886,12 @@ export const OcrWorkspace: React.FC = () => {
             .filter((block) => block.docId === displayDocument.id)
             .map((block) => block.id)
         );
-        const persistedBlocks = newBlocks.filter((block) => !pendingBlockIds.has(block.id));
+        const persistedBlockIds = newBlocks
+          .filter((block) => !pendingBlockIds.has(block.id))
+          .map((block) => block.id);
 
-        if (persistedBlocks.length > 0) {
-          const documentRef = doc(db, 'users', user.uid, 'documents', displayDocument.id);
-          await updateDoc(documentRef, { blocks: persistedBlocks });
+        if (persistedBlockIds.length > 0) {
+          await reorderBlocks(displayDocument.id, persistedBlockIds);
         }
       }
     } catch (err) {

@@ -4,9 +4,11 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  limit,
   onSnapshot,
   orderBy,
   query,
+  runTransaction,
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
@@ -35,23 +37,32 @@ export const useCloudHistory = (userId: string | undefined) => {
   const [documents, setDocuments] = useState<CloudDocument[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [pageSize, setPageSize] = useState<number>(25);
+  const [hasMore, setHasMore] = useState<boolean>(false);
   const ensureDocumentRequestsRef = useRef(new Map<string, Promise<CloudWriteResult>>());
 
   useEffect(() => {
     if (!userId) {
       setDocuments([]);
       setIsLoading(false);
+      setHasMore(false);
       return;
     }
 
     setIsLoading(true);
     const documentsRef = collection(db, 'users', userId, 'documents');
-    const q = query(documentsRef, orderBy('timestamp', 'desc'));
+    const q = query(documentsRef, orderBy('timestamp', 'desc'), limit(pageSize + 1));
 
     const unsubscribe = onSnapshot(
       q,
       (querySnapshot) => {
-        const fetchedDocs: CloudDocument[] = querySnapshot.docs.map((docSnapshot) => {
+        const hasMoreDocs = querySnapshot.docs.length > pageSize;
+        setHasMore(hasMoreDocs);
+        const docsToProcess = hasMoreDocs
+          ? querySnapshot.docs.slice(0, pageSize)
+          : querySnapshot.docs;
+
+        const fetchedDocs: CloudDocument[] = docsToProcess.map((docSnapshot) => {
           const data = docSnapshot.data();
           const legacyBlocks = data.text
             ? [{ id: 'legacy', text: data.text, timestamp: data.timestamp }]
@@ -93,7 +104,11 @@ export const useCloudHistory = (userId: string | undefined) => {
     );
 
     return () => unsubscribe();
-  }, [userId]);
+  }, [userId, pageSize]);
+
+  const loadMore = useCallback(() => {
+    setPageSize((prev) => prev + 25);
+  }, []);
 
   const generateDocumentId = useCallback((): string | null => {
     if (!userId) return null;
@@ -169,37 +184,96 @@ export const useCloudHistory = (userId: string | undefined) => {
   );
 
   const deleteExtraction = useCallback(
-    async (documentId: string) => {
-      if (!userId) return;
+    async (documentId: string): Promise<boolean> => {
+      if (!userId) return false;
       try {
         setError(null);
         await deleteDoc(doc(db, 'users', userId, 'documents', documentId));
+        return true;
       } catch (err) {
         console.error('Failed to delete:', err);
         setError('Failed to delete the document.');
+        return false;
+      }
+    },
+    [userId]
+  );
+
+  const reorderBlocks = useCallback(
+    async (documentId: string, orderedBlockIds: string[]): Promise<boolean> => {
+      if (!userId) return false;
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setError('Cloud sync is unavailable while offline.');
+        return false;
+      }
+
+      try {
+        setError(null);
+        const documentRef = doc(db, 'users', userId, 'documents', documentId);
+
+        await runTransaction(db, async (transaction) => {
+          const docSnap = await transaction.get(documentRef);
+          if (!docSnap.exists()) {
+            throw new Error('Document does not exist.');
+          }
+
+          const data = docSnap.data();
+          const existingBlocks: ExtractionBlock[] = Array.isArray(data.blocks) ? data.blocks : [];
+
+          const blockMap = new Map<string, ExtractionBlock>(existingBlocks.map((b) => [b.id, b]));
+
+          const updatedOrderedBlocks: ExtractionBlock[] = [];
+          let currentOrder = 1000;
+
+          // Place blocks matching orderedBlockIds in requested order
+          for (const id of orderedBlockIds) {
+            const b = blockMap.get(id);
+            if (b) {
+              updatedOrderedBlocks.push({ ...b, order: currentOrder });
+              currentOrder += 1000;
+              blockMap.delete(id);
+            }
+          }
+
+          // Concurrently saved blocks on server not yet in orderedBlockIds: append to end
+          for (const remainingBlock of blockMap.values()) {
+            updatedOrderedBlocks.push({ ...remainingBlock, order: currentOrder });
+            currentOrder += 1000;
+          }
+
+          transaction.update(documentRef, { blocks: updatedOrderedBlocks });
+        });
+
+        return true;
+      } catch (err) {
+        console.error('Failed to reorder blocks:', err);
+        setError('Failed to update block order in the cloud.');
+        return false;
       }
     },
     [userId]
   );
 
   const renameSession = useCallback(
-    async (sessionId: string, newTitle: string) => {
-      if (!userId || !newTitle.trim()) return;
+    async (sessionId: string, newTitle: string): Promise<boolean> => {
+      if (!userId || !newTitle.trim()) return false;
       try {
         setError(null);
         const documentRef = doc(db, 'users', userId, 'documents', sessionId);
         await updateDoc(documentRef, { title: newTitle.trim() });
+        return true;
       } catch (err) {
         console.error('Failed to rename:', err);
         setError('Failed to rename the document.');
+        return false;
       }
     },
     [userId]
   );
 
   const togglePinSession = useCallback(
-    async (sessionId: string, currentPinnedStatus: boolean) => {
-      if (!userId) return;
+    async (sessionId: string, currentPinnedStatus: boolean): Promise<boolean> => {
+      if (!userId) return false;
       try {
         setError(null);
         const documentRef = doc(db, 'users', userId, 'documents', sessionId);
@@ -208,9 +282,11 @@ export const useCloudHistory = (userId: string | undefined) => {
           isPinned: nextPinned,
           pinnedAt: nextPinned ? Date.now() : null,
         });
+        return true;
       } catch (err) {
         console.error('Failed to toggle pin:', err);
         setError('Failed to update pinned status.');
+        return false;
       }
     },
     [userId]
@@ -220,10 +296,13 @@ export const useCloudHistory = (userId: string | undefined) => {
     documents,
     isLoading,
     error,
+    hasMore,
+    loadMore,
     generateDocumentId,
     ensureDocument,
     saveBlock,
     deleteExtraction,
+    reorderBlocks,
     renameSession,
     togglePinSession,
   };
