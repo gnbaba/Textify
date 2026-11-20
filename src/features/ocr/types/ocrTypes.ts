@@ -15,6 +15,7 @@ export interface OcrOptions {
   deskew?: boolean;
   engine?: 'local' | 'ai';
   isStale?: () => boolean;
+  signal?: AbortSignal;
 }
 
 export interface IOcrService {

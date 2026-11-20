@@ -96,6 +96,24 @@ describe('RoutingOcrService', () => {
     expect(geminiOcrService.extractText).toHaveBeenCalledTimes(1);
   });
 
+  it('should propagate AbortError without triggering Gemini fallback', async () => {
+    const abortError = new DOMException('The operation was aborted.', 'AbortError');
+    const controller = new AbortController();
+    vi.mocked(tesseractOcrService.extractText).mockRejectedValueOnce(abortError);
+
+    await expect(
+      routingOcrService.extractText(mockFile, 'document', { signal: controller.signal })
+    ).rejects.toBe(abortError);
+
+    expect(tesseractOcrService.extractText).toHaveBeenCalledWith(
+      mockFile,
+      'document',
+      expect.objectContaining({ signal: controller.signal }),
+      undefined
+    );
+    expect(geminiOcrService.extractText).not.toHaveBeenCalled();
+  });
+
   it('should throw error when local OCR returns empty text and Gemini key is missing', async () => {
     vi.stubEnv('VITE_GEMINI_API_KEY', '');
     vi.mocked(tesseractOcrService.extractText).mockResolvedValueOnce({

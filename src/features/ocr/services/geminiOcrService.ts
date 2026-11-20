@@ -1,4 +1,7 @@
-import type { IOcrService, ExtractionMode, OcrOptions } from '../types/ocrTypes';
+import type { ExtractionMode, IOcrService, OcrOptions } from '../types/ocrTypes';
+
+const isAbortError = (error: unknown): boolean =>
+  typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError';
 
 export class GeminiOcrService implements IOcrService {
   private static instance: GeminiOcrService;
@@ -33,7 +36,9 @@ export class GeminiOcrService implements IOcrService {
   ): Promise<{ text: string; confidence?: number }> {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error('Gemini API key is missing. Please add VITE_GEMINI_API_KEY to your .env file.');
+      throw new Error(
+        'Gemini API key is missing. Please add VITE_GEMINI_API_KEY to your .env file.'
+      );
     }
 
     if (onProgress) onProgress(20);
@@ -43,9 +48,10 @@ export class GeminiOcrService implements IOcrService {
       if (onProgress) onProgress(40);
 
       // System instruction embedded in the prompt to enforce raw text response
-      const prompt = mode === 'graphic'
-        ? 'Extract text from this image. It contains a single block of text or logotype. Return only the extracted text as-is, with no introductory text, no comments, and no markdown wrapping.'
-        : 'Perform OCR on this image. Extract all text exactly as written, preserving layouts, paragraphs, tables (as markdown), and lists. Return only the extracted text with no conversational intro/outro and no wrapper.';
+      const prompt =
+        mode === 'graphic'
+          ? 'Extract text from this image. It contains a single block of text or logotype. Return only the extracted text as-is, with no introductory text, no comments, and no markdown wrapping.'
+          : 'Perform OCR on this image. Extract all text exactly as written, preserving layouts, paragraphs, tables (as markdown), and lists. Return only the extracted text with no conversational intro/outro and no wrapper.';
 
       const payload = {
         contents: [
@@ -73,6 +79,7 @@ export class GeminiOcrService implements IOcrService {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(payload),
+          signal: options?.signal,
         }
       );
 
@@ -93,6 +100,10 @@ export class GeminiOcrService implements IOcrService {
       if (onProgress) onProgress(100);
       return { text: extractedText };
     } catch (error) {
+      if (isAbortError(error)) {
+        throw error;
+      }
+
       console.error('Gemini OCR Service Error:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`AI Scan failed: ${errorMessage}`);

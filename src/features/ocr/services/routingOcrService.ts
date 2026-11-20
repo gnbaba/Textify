@@ -2,6 +2,9 @@ import type { ExtractionMode, IOcrService, OcrOptions } from '../types/ocrTypes'
 import { geminiOcrService } from './geminiOcrService';
 import { tesseractOcrService } from './tesseractOcrService';
 
+const isAbortError = (error: unknown): boolean =>
+  typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError';
+
 class RoutingOcrService implements IOcrService {
   private static instance: RoutingOcrService;
 
@@ -24,6 +27,7 @@ class RoutingOcrService implements IOcrService {
     const autoOptions: OcrOptions = {
       ...options,
       language: options?.language ?? 'eng',
+      signal: options?.signal,
       psm: mode === 'document' ? 'auto' : 'single_block',
       preset: mode === 'document' ? 'document' : 'original',
       thresholdMode: 'adaptive',
@@ -37,6 +41,10 @@ class RoutingOcrService implements IOcrService {
       // 2. Always attempt local Tesseract processing first
       localResult = await tesseractOcrService.extractText(file, mode, autoOptions, onProgress);
     } catch (err) {
+      if (isAbortError(err)) {
+        throw err;
+      }
+
       localError = err instanceof Error ? err : new Error(String(err));
       console.warn('Local Tesseract OCR processing failed:', err);
     }
@@ -62,6 +70,10 @@ class RoutingOcrService implements IOcrService {
         // Run vision OCR using Gemini API
         return await geminiOcrService.extractText(file, mode, autoOptions, onProgress);
       } catch (geminiErr) {
+        if (isAbortError(geminiErr)) {
+          throw geminiErr;
+        }
+
         console.error('Gemini AI fallback failed:', geminiErr);
         // If Gemini failed too, and Tesseract had some text, return Tesseract's result as a last resort
         if (localResult && localResult.text && localResult.text.trim() !== '') {

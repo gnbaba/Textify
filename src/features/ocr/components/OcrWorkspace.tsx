@@ -17,12 +17,16 @@ import {
 } from '@dnd-kit/sortable';
 import { arrayRemove, doc, updateDoc } from 'firebase/firestore';
 import { AlertTriangle, FileText, Lock, X, Zap } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { db } from '../../../config/firebase';
 import { useWorkspace } from '../../../shared/context/WorkspaceContext';
 import { LoginModal } from '../../auth/components/LoginModal';
 import { useAuth } from '../../auth/hooks/useAuth';
-import { ExtractionBlock, useCloudHistory } from '../../history/hooks/useCloudHistory';
+import {
+  type CloudDocument,
+  type ExtractionBlock,
+  useCloudHistory,
+} from '../../history/hooks/useCloudHistory';
 import { useOcrProcessor } from '../hooks/useOcrProcessor';
 import { routingOcrService } from '../services/routingOcrService';
 import type { ExtractionMode } from '../types/ocrTypes';
@@ -83,22 +87,66 @@ const enforceMaxImageResolution = async (file: File, maxPixels = 16_000_000): Pr
   });
 };
 
+interface PendingBlock extends ExtractionBlock {
+  docId: string;
+  order: number;
+  documentTitle: string;
+  syncStatus: 'pending' | 'failed';
+  isParentSynced: boolean;
+  syncError?: string;
+}
+
+const toExtractionBlock = (block: PendingBlock): ExtractionBlock => ({
+  id: block.id,
+  text: block.text,
+  timestamp: block.timestamp,
+  order: block.order,
+});
+
+const mergeExtractionBlocks = (
+  existingBlocks: ExtractionBlock[],
+  incomingBlocks: ExtractionBlock[]
+): ExtractionBlock[] => {
+  const mergedBlocks = new Map(existingBlocks.map((block) => [block.id, block]));
+  const orderedIncomingBlocks = [...incomingBlocks].sort(
+    (firstBlock, secondBlock) =>
+      (firstBlock.order ?? firstBlock.timestamp) - (secondBlock.order ?? secondBlock.timestamp)
+  );
+
+  for (const block of orderedIncomingBlocks) {
+    if (!mergedBlocks.has(block.id)) {
+      mergedBlocks.set(block.id, block);
+    }
+  }
+
+  return Array.from(mergedBlocks.values());
+};
+
 export const OcrWorkspace: React.FC = () => {
   const { user } = useAuth();
-  const { documents, createSession, addToSession } = useCloudHistory(user?.uid);
-  const { status, text, progress, process, error } = useOcrProcessor(routingOcrService);
+  const { documents, generateDocumentId, ensureDocument, saveBlock } = useCloudHistory(user?.uid);
+  const { status, progress, process } = useOcrProcessor(routingOcrService);
   const { activeDocument, setActiveDocument } = useWorkspace();
-
-  const displayDocument = user
-    ? activeDocument
-      ? documents.find((d) => d.id === activeDocument.id) || null
-      : null
-    : activeDocument;
 
   const [mode, setMode] = useState<ExtractionMode>('document');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
-  const lastSavedTextRef = useRef<string | null>(null);
+  const [draftDocId, setDraftDocId] = useState<string | null>(null);
+  const [pendingBlocks, setPendingBlocks] = useState<PendingBlock[]>([]);
+  const [workspaceError, setWorkspaceError] = useState<string | null>(null);
+  const [isRetryingSync, setIsRetryingSync] = useState(false);
+  const draftDocIdRef = useRef<string | null>(null);
+  const pendingBlocksRef = useRef<PendingBlock[]>([]);
+  const activeDocumentRef = useRef<CloudDocument | null>(null);
+
+  const updatePendingBlocks = useCallback(
+    (updater: (currentBlocks: PendingBlock[]) => PendingBlock[]) => {
+      const nextBlocks = updater(pendingBlocksRef.current);
+      pendingBlocksRef.current = nextBlocks;
+      setPendingBlocks(nextBlocks);
+    },
+    []
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -110,8 +158,6 @@ export const OcrWorkspace: React.FC = () => {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
-
-  const activeDragBlock = displayDocument?.blocks.find((b) => b.id === activeDragId) || null;
 
   // Preprocessing and Crop Editor states
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -128,6 +174,67 @@ export const OcrWorkspace: React.FC = () => {
 
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const sourceImgRef = useRef<HTMLImageElement | null>(null);
+  const previousActiveDocumentIdRef = useRef<string | null>(null);
+
+  activeDocumentRef.current = activeDocument;
+
+  const cloudDocument = user
+    ? activeDocument
+      ? documents.find((document) => document.id === activeDocument.id) || null
+      : null
+    : null;
+  const baseDocument = useMemo<CloudDocument | null>(() => {
+    if (!user) return activeDocument;
+    if (!activeDocument) return null;
+    if (!cloudDocument) return activeDocument;
+
+    const mergedBlocks = [
+      ...activeDocument.blocks,
+      ...cloudDocument.blocks.filter(
+        (cloudBlock) => !activeDocument.blocks.some((block) => block.id === cloudBlock.id)
+      ),
+    ];
+
+    return { ...activeDocument, ...cloudDocument, blocks: mergedBlocks };
+  }, [activeDocument, cloudDocument, user]);
+  const currentSessionId = activeDocument?.id ?? draftDocId;
+
+  const displayDocument = useMemo<CloudDocument | null>(() => {
+    const sessionPendingBlocks = pendingBlocks.filter(
+      (pendingBlock) => pendingBlock.docId === (activeDocument?.id ?? draftDocId)
+    );
+    const baseBlocks = baseDocument?.blocks ?? [];
+    const mergedBlocks = [
+      ...baseBlocks,
+      ...sessionPendingBlocks
+        .filter((pendingBlock) => !baseBlocks.some((block) => block.id === pendingBlock.id))
+        .map(toExtractionBlock),
+    ];
+
+    if (baseDocument) {
+      return { ...baseDocument, blocks: mergedBlocks };
+    }
+
+    if (user && draftDocId) {
+      return {
+        id: draftDocId,
+        title:
+          sessionPendingBlocks[0]?.documentTitle ||
+          (mode === 'document' ? 'Document Scan' : 'Graphic Scan'),
+        blocks: mergedBlocks,
+        timestamp: sessionPendingBlocks[0]?.timestamp ?? 0,
+      };
+    }
+
+    return null;
+  }, [activeDocument?.id, baseDocument, draftDocId, mode, pendingBlocks, user]);
+
+  const activeDragBlock =
+    displayDocument?.blocks.find((block) => block.id === activeDragId) || null;
+  const failedSessionBlocks = pendingBlocks.filter(
+    (pendingBlock) =>
+      pendingBlock.docId === currentSessionId && pendingBlock.syncStatus === 'failed'
+  );
 
   // Centralized revocation of blob URLs across image replacements and unmount
   useEffect(() => {
@@ -137,6 +244,14 @@ export const OcrWorkspace: React.FC = () => {
       }
     };
   }, [activeImageSrc]);
+
+  useEffect(() => {
+    if (previousActiveDocumentIdRef.current !== activeDocument?.id) {
+      previousActiveDocumentIdRef.current = activeDocument?.id ?? null;
+      draftDocIdRef.current = null;
+      setDraftDocId(null);
+    }
+  }, [activeDocument?.id]);
 
   const handleCropPointerDown = (
     e: React.PointerEvent,
@@ -259,18 +374,193 @@ export const OcrWorkspace: React.FC = () => {
     }
   }, [activeImageSrc, cropBox, mode]);
 
+  const persistPendingBlock = async (pendingBlock: PendingBlock): Promise<void> => {
+    let isParentSynced = pendingBlock.isParentSynced;
+
+    if (!isParentSynced) {
+      const parentResult = await ensureDocument(
+        pendingBlock.docId,
+        pendingBlock.documentTitle,
+        pendingBlock.timestamp
+      );
+
+      if (!parentResult.ok) {
+        updatePendingBlocks((currentBlocks) =>
+          currentBlocks.map((block) =>
+            block.id === pendingBlock.id
+              ? {
+                  ...block,
+                  syncStatus: 'failed',
+                  syncError: parentResult.error,
+                }
+              : block
+          )
+        );
+        return;
+      }
+
+      isParentSynced = true;
+      updatePendingBlocks((currentBlocks) =>
+        currentBlocks.map((block) =>
+          block.id === pendingBlock.id
+            ? { ...block, isParentSynced: true, syncStatus: 'pending', syncError: undefined }
+            : block
+        )
+      );
+    }
+
+    const blockResult = await saveBlock(pendingBlock.docId, toExtractionBlock(pendingBlock));
+
+    if (!blockResult.ok) {
+      updatePendingBlocks((currentBlocks) =>
+        currentBlocks.map((block) =>
+          block.id === pendingBlock.id
+            ? { ...block, syncStatus: 'failed', syncError: blockResult.error }
+            : block
+        )
+      );
+      return;
+    }
+
+    updatePendingBlocks((currentBlocks) =>
+      currentBlocks.filter((block) => block.id !== pendingBlock.id)
+    );
+
+    const currentDocument = activeDocumentRef.current;
+    const shouldCreateDraft = !currentDocument && draftDocIdRef.current === pendingBlock.docId;
+    const shouldUpdateCurrentDocument = currentDocument?.id === pendingBlock.docId;
+
+    if (shouldCreateDraft || shouldUpdateCurrentDocument) {
+      const pendingSessionBlocks = pendingBlocksRef.current
+        .filter((block) => block.docId === pendingBlock.docId)
+        .map(toExtractionBlock);
+      const mergedBlocks = mergeExtractionBlocks(currentDocument?.blocks ?? [], [
+        ...pendingSessionBlocks,
+        toExtractionBlock(pendingBlock),
+      ]);
+      const nextDocument = currentDocument
+        ? { ...currentDocument, blocks: mergedBlocks }
+        : {
+            id: pendingBlock.docId,
+            title: pendingBlock.documentTitle,
+            blocks: mergedBlocks,
+            timestamp: pendingBlock.timestamp,
+          };
+
+      activeDocumentRef.current = nextDocument;
+      setActiveDocument(nextDocument);
+    }
+  };
+
+  const stageExtractedText = (extractedText: string): void => {
+    const documentTitle = mode === 'document' ? 'Document Scan' : 'Graphic Scan';
+    const timestamp = Date.now();
+    const blockId = crypto.randomUUID();
+
+    if (!user) {
+      const currentBlocks = activeDocument?.blocks ?? [];
+      const maxOrder = currentBlocks.reduce(
+        (maximum, block) => Math.max(maximum, block.order ?? 0),
+        0
+      );
+      const guestBlock: ExtractionBlock = {
+        id: blockId,
+        text: extractedText,
+        timestamp,
+        order: maxOrder + 1000,
+      };
+
+      setActiveDocument(
+        activeDocument
+          ? { ...activeDocument, blocks: [...currentBlocks, guestBlock] }
+          : {
+              id: `guest_session_${timestamp}`,
+              title: documentTitle,
+              blocks: [guestBlock],
+              timestamp,
+            }
+      );
+      return;
+    }
+
+    let currentDocId = activeDocument?.id ?? draftDocIdRef.current;
+
+    if (!currentDocId) {
+      currentDocId = generateDocumentId();
+      if (!currentDocId) {
+        setWorkspaceError('Could not prepare a cloud document for this scan.');
+        return;
+      }
+      draftDocIdRef.current = currentDocId;
+      setDraftDocId(currentDocId);
+    }
+
+    const currentSessionBlocks = [
+      ...(displayDocument?.blocks ?? []),
+      ...(activeDocumentRef.current?.blocks ?? []),
+      ...pendingBlocksRef.current.filter((block) => block.docId === currentDocId),
+    ];
+    const maxOrder = currentSessionBlocks.reduce(
+      (maximum, block) => Math.max(maximum, block.order ?? 0),
+      0
+    );
+    const isExistingCloudDocument = Boolean(
+      activeDocument?.id && documents.some((document) => document.id === activeDocument.id)
+    );
+    const pendingBlock: PendingBlock = {
+      id: blockId,
+      docId: currentDocId,
+      text: extractedText,
+      timestamp,
+      order: maxOrder + 1000,
+      documentTitle,
+      syncStatus: 'pending',
+      isParentSynced: isExistingCloudDocument,
+    };
+
+    updatePendingBlocks((currentBlocks) => [...currentBlocks, pendingBlock]);
+    void persistPendingBlock(pendingBlock);
+  };
+
+  const handleRetrySync = async (): Promise<void> => {
+    if (!user || isRetryingSync || !currentSessionId) return;
+
+    const failedBlocks = pendingBlocks.filter(
+      (block) => block.docId === currentSessionId && block.syncStatus === 'failed'
+    );
+    if (failedBlocks.length === 0) return;
+
+    setIsRetryingSync(true);
+    try {
+      for (const failedBlock of failedBlocks) {
+        updatePendingBlocks((currentBlocks) =>
+          currentBlocks.map((block) =>
+            block.id === failedBlock.id
+              ? { ...block, syncStatus: 'pending', syncError: undefined }
+              : block
+          )
+        );
+        await persistPendingBlock({ ...failedBlock, syncStatus: 'pending' });
+      }
+    } finally {
+      setIsRetryingSync(false);
+    }
+  };
+
   const handleImageSelected = async (file: File) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-      alert('Invalid file type. Please upload a JPG, PNG, or WEBP image.');
+      setWorkspaceError('Invalid file type. Please upload a JPG, PNG, or WEBP image.');
       return;
     }
 
     const maxSizeInBytes = 10 * 1024 * 1024;
     if (file.size > maxSizeInBytes) {
-      alert('File is too large. Please keep images under 10MB.');
+      setWorkspaceError('File is too large. Please keep images under 10MB.');
       return;
     }
+
+    setWorkspaceError(null);
 
     const safeFile = await enforceMaxImageResolution(file);
     setSelectedFile(safeFile);
@@ -290,7 +580,6 @@ export const OcrWorkspace: React.FC = () => {
 
     setIsPreparing(true);
     setIsProcessing(true);
-    lastSavedTextRef.current = '';
 
     if (!user) {
       checkAndResetCooldown();
@@ -358,7 +647,7 @@ export const OcrWorkspace: React.FC = () => {
 
       canvas.toBlob(async (blob) => {
         if (!blob) {
-          alert('Failed to generate cropped image.');
+          setWorkspaceError('Failed to generate cropped image.');
           setIsPreparing(false);
           setIsProcessing(false);
           return;
@@ -370,13 +659,24 @@ export const OcrWorkspace: React.FC = () => {
         });
 
         try {
-          await process(croppedFile, mode);
-          setActiveImageSrc(null);
-          setSelectedFile(null);
+          const result = await process(croppedFile, mode);
+
+          if (result.ok && result.text.trim()) {
+            setActiveImageSrc(null);
+            setSelectedFile(null);
+            setWorkspaceError(null);
+            stageExtractedText(result.text);
+          } else if (!result.ok && result.aborted) {
+            return;
+          } else {
+            setWorkspaceError(
+              result.ok ? 'No readable text detected in selected region.' : result.error
+            );
+          }
         } catch (error) {
           console.error('Processing error:', error);
           const errorMessage = error instanceof Error ? error.message : String(error);
-          alert(`OCR FAILED: ${errorMessage}`);
+          setWorkspaceError(`OCR FAILED: ${errorMessage}`);
         } finally {
           setIsPreparing(false);
           setTimeout(() => {
@@ -387,7 +687,7 @@ export const OcrWorkspace: React.FC = () => {
     } catch (error) {
       console.error('Cropping and processing failed:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
-      alert(`OCR FAILED: ${errorMessage}`);
+      setWorkspaceError(`OCR FAILED: ${errorMessage}`);
       setIsPreparing(false);
       setIsProcessing(false);
     }
@@ -422,7 +722,7 @@ export const OcrWorkspace: React.FC = () => {
     };
   }, []);
 
-  const checkAndResetCooldown = () => {
+  const checkAndResetCooldown = useCallback(() => {
     const exhaustedDateStr = localStorage.getItem('textify_exhausted_date');
     if (exhaustedDateStr) {
       const exhaustedDate = parseInt(exhaustedDateStr, 10);
@@ -436,7 +736,7 @@ export const OcrWorkspace: React.FC = () => {
       }
     }
     return false;
-  };
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -444,53 +744,7 @@ export const OcrWorkspace: React.FC = () => {
       const savedScans = parseInt(localStorage.getItem('textify_guest_scans') || '0', 10);
       setGuestScansCount(savedScans);
     }
-  }, [user]);
-
-  useEffect(() => {
-    const triggerCatcher = async () => {
-      if (status !== 'success' || !text) return;
-      if (text === lastSavedTextRef.current) return;
-
-      lastSavedTextRef.current = text;
-
-      const safeId =
-        typeof crypto !== 'undefined' && crypto.randomUUID
-          ? crypto.randomUUID()
-          : Date.now().toString(36) + Math.random().toString(36).substring(2);
-
-      try {
-        if (displayDocument?.id) {
-          if (user) {
-            await addToSession(displayDocument.id, text);
-          } else {
-            setActiveDocument({
-              ...displayDocument,
-              blocks: [...displayDocument.blocks, { id: safeId, text, timestamp: Date.now() }],
-            });
-          }
-        } else {
-          const title = mode === 'document' ? 'Document Scan' : 'Graphic Scan';
-
-          if (user) {
-            const newDoc = await createSession(text, title);
-            if (newDoc) setActiveDocument(newDoc);
-          } else {
-            setActiveDocument({
-              id: 'guest_session_' + Date.now(),
-              title: title,
-              blocks: [{ id: safeId, text, timestamp: Date.now() }],
-              timestamp: Date.now(),
-            });
-          }
-        }
-      } catch (err) {
-        console.error('Session creation failed:', err);
-      }
-    };
-
-    triggerCatcher();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, text, mode, displayDocument?.id, user]);
+  }, [checkAndResetCooldown, user]);
 
   const handleCopyText = async (textToCopy: string, blockId: string) => {
     try {
@@ -537,15 +791,41 @@ export const OcrWorkspace: React.FC = () => {
 
   const confirmDeleteBlock = async () => {
     if (!displayDocument || !blockToDelete) return;
+
+    const pendingBlock = pendingBlocksRef.current.find(
+      (block) => block.id === blockToDelete.id && block.docId === displayDocument.id
+    );
+
+    if (pendingBlock) {
+      updatePendingBlocks((currentBlocks) =>
+        currentBlocks.filter((block) => block.id !== pendingBlock.id)
+      );
+
+      const currentDocument = activeDocumentRef.current;
+      if (currentDocument?.id === displayDocument.id) {
+        const nextDocument = {
+          ...currentDocument,
+          blocks: currentDocument.blocks.filter((block) => block.id !== pendingBlock.id),
+        };
+        activeDocumentRef.current = nextDocument;
+        setActiveDocument(nextDocument);
+      }
+
+      setBlockToDelete(null);
+      return;
+    }
+
     try {
       if (user) {
         const documentRef = doc(db, 'users', user.uid, 'documents', displayDocument.id);
         await updateDoc(documentRef, { blocks: arrayRemove(blockToDelete) });
       } else {
-        setActiveDocument({
+        const nextDocument = {
           ...displayDocument,
           blocks: displayDocument.blocks.filter((b) => b.id !== blockToDelete.id),
-        });
+        };
+        activeDocumentRef.current = nextDocument;
+        setActiveDocument(nextDocument);
       }
     } catch (err) {
       console.error('Failed to delete block:', err);
@@ -573,15 +853,26 @@ export const OcrWorkspace: React.FC = () => {
     const newBlocks = arrayMove(displayDocument.blocks, oldIndex, newIndex);
 
     // Optimistic UI update for instant seamless reorder
-    setActiveDocument({
+    const nextDocument = {
       ...displayDocument,
       blocks: newBlocks,
-    });
+    };
+    activeDocumentRef.current = nextDocument;
+    setActiveDocument(nextDocument);
 
     try {
       if (user) {
-        const documentRef = doc(db, 'users', user.uid, 'documents', displayDocument.id);
-        await updateDoc(documentRef, { blocks: newBlocks });
+        const pendingBlockIds = new Set(
+          pendingBlocksRef.current
+            .filter((block) => block.docId === displayDocument.id)
+            .map((block) => block.id)
+        );
+        const persistedBlocks = newBlocks.filter((block) => !pendingBlockIds.has(block.id));
+
+        if (persistedBlocks.length > 0) {
+          const documentRef = doc(db, 'users', user.uid, 'documents', displayDocument.id);
+          await updateDoc(documentRef, { blocks: persistedBlocks });
+        }
       }
     } catch (err) {
       console.error('Reorder failed:', err);
@@ -656,6 +947,57 @@ export const OcrWorkspace: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {workspaceError && (
+          <div
+            role="alert"
+            className="w-full bg-[#FFFDF7] border border-[#E96C3F] p-4 text-[#E96C3F] text-[10px] font-bold uppercase shadow-drafting-sm"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <span className="font-black tracking-wider block mb-1 text-xs">
+                  <AlertTriangle className="w-4 h-4 inline mr-2" />
+                  SCANNING TERMINATED
+                </span>
+                <span className="break-words">{workspaceError}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setWorkspaceError(null)}
+                className="shrink-0 hover:bg-[#E96C3F]/10 p-1"
+                aria-label="Dismiss error"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {user && failedSessionBlocks.length > 0 && (
+          <div
+            role="alert"
+            className="w-full bg-[#FFFDF7] border border-[#E96C3F] p-4 text-[#E96C3F] text-[10px] font-bold uppercase shadow-drafting-sm"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span className="font-black tracking-wider block text-xs">
+                  [ CLOUD SYNC FAILED — LOCAL DRAFT PRESERVED ]
+                </span>
+                {failedSessionBlocks[0]?.syncError && (
+                  <span className="block mt-1 break-words">{failedSessionBlocks[0].syncError}</span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleRetrySync()}
+                disabled={isRetryingSync}
+                className="shrink-0 border border-[#E96C3F] px-4 py-2 hover:bg-[#E96C3F] hover:text-white transition-colors disabled:opacity-50"
+              >
+                [ RETRY SYNC ]
+              </button>
+            </div>
+          </div>
+        )}
 
         {spamWarning && (
           <div className="w-full text-center mb-2 animate-pulse">
@@ -764,6 +1106,9 @@ export const OcrWorkspace: React.FC = () => {
                 onClick={() => {
                   setActiveImageSrc(null);
                   setSelectedFile(null);
+                  draftDocIdRef.current = null;
+                  setDraftDocId(null);
+                  setWorkspaceError(null);
                 }}
                 disabled={isProcessing}
                 className="px-5 py-2.5 border border-[#20251F]/20 hover:border-[#20251F] hover:bg-[#20251F]/5 text-[#20251F] transition-colors cursor-pointer"
@@ -805,15 +1150,6 @@ export const OcrWorkspace: React.FC = () => {
             <span className="absolute inset-0 flex items-center justify-center text-[8px] font-extrabold tracking-widest text-[#FFFDF7] mix-blend-difference uppercase">
               OCR ANALYSIS IN PROGRESS &bull; {Math.round(progress)}%
             </span>
-          </div>
-        )}
-
-        {status === 'error' && error && (
-          <div className="w-full bg-[#FFFDF7] border border-[#E96C3F] p-4 text-[#E96C3F] text-[10px] font-bold uppercase break-all shadow-drafting-sm">
-            <span className="font-black tracking-wider block mb-1 text-xs">
-              SCANNING TERMINATED
-            </span>
-            {error}
           </div>
         )}
       </div>
