@@ -161,6 +161,7 @@ export const OcrWorkspace: React.FC = () => {
   const draftDocIdRef = useRef<string | null>(null);
   const pendingBlocksRef = useRef<PendingBlock[]>([]);
   const activeDocumentRef = useRef<CloudDocument | null>(null);
+  const isScanRunningRef = useRef(false);
 
   const updatePendingBlocks = useCallback(
     (updater: (currentBlocks: PendingBlock[]) => PendingBlock[]) => {
@@ -699,81 +700,88 @@ export const OcrWorkspace: React.FC = () => {
   const handleRunOcr = async () => {
     if (!selectedFile || !activeImageSrc || !sourceImgRef.current) return;
 
-    if (status === 'loading' || isPreparing || isProcessing) {
+    if (isScanRunningRef.current || status === 'loading' || isPreparing || isProcessing) {
       setSpamWarning(true);
       setTimeout(() => setSpamWarning(false), 2500);
       return;
     }
 
+    isScanRunningRef.current = true;
     setIsPreparing(true);
     setIsProcessing(true);
 
-    if (!user) {
-      checkAndResetCooldown();
-      const currentScans = parseInt(localStorage.getItem('textify_guest_scans') || '0', 10);
-
-      if (currentScans >= 10) {
-        setShowLimitModal(true);
-        setIsPreparing(false);
-        setIsProcessing(false);
-        return;
-      }
-
-      const newCount = currentScans + 1;
-      localStorage.setItem('textify_guest_scans', newCount.toString());
-      setGuestScansCount(newCount);
-
-      if (newCount === 10) {
-        localStorage.setItem('textify_exhausted_date', Date.now().toString());
-      }
-    }
-
     try {
-      const croppedFile = await getCroppedImageFile();
-      if (!croppedFile) {
-        setWorkspaceError('Failed to generate cropped image.');
-        setIsPreparing(false);
-        setIsProcessing(false);
-        return;
+      if (!user) {
+        checkAndResetCooldown();
+        const currentScans = parseInt(localStorage.getItem('textify_guest_scans') || '0', 10);
+
+        if (currentScans >= 10) {
+          setShowLimitModal(true);
+          setIsPreparing(false);
+          setIsProcessing(false);
+          return;
+        }
+
+        const newCount = currentScans + 1;
+        localStorage.setItem('textify_guest_scans', newCount.toString());
+        setGuestScansCount(newCount);
+
+        if (newCount === 10) {
+          localStorage.setItem('textify_exhausted_date', Date.now().toString());
+        }
       }
 
       try {
-        const result = await process(croppedFile, mode);
-
-        if (result.ok && result.text.trim()) {
-          setActiveImageSrc(null);
-          setSelectedFile(null);
-          setWorkspaceError(null);
-          stageExtractedText(result.text);
-        } else if (!result.ok && result.aborted) {
+        const croppedFile = await getCroppedImageFile();
+        if (!croppedFile) {
+          setWorkspaceError('Failed to generate cropped image.');
+          setIsPreparing(false);
+          setIsProcessing(false);
           return;
-        } else {
-          const errMsg = result.ok ? 'No readable text detected in selected region.' : result.error;
-          setWorkspaceError(errMsg);
-          if (isCloudAiEnabled) {
-            if (!user) {
-              setIsLoginModalOpen(true);
-            } else {
-              setShowCloudConsentModal(true);
+        }
+
+        try {
+          const result = await process(croppedFile, mode);
+
+          if (result.ok && result.text.trim()) {
+            setActiveImageSrc(null);
+            setSelectedFile(null);
+            setWorkspaceError(null);
+            stageExtractedText(result.text);
+          } else if (!result.ok && result.aborted) {
+            return;
+          } else {
+            const errMsg = result.ok
+              ? 'No readable text detected in selected region.'
+              : result.error;
+            setWorkspaceError(errMsg);
+            if (isCloudAiEnabled) {
+              if (!user) {
+                setIsLoginModalOpen(true);
+              } else {
+                setShowCloudConsentModal(true);
+              }
             }
           }
+        } catch (error) {
+          console.error('Processing error:', error);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          setWorkspaceError(`OCR FAILED: ${errorMessage}`);
+        } finally {
+          setIsPreparing(false);
+          setTimeout(() => {
+            setIsProcessing(false);
+          }, 3000);
         }
       } catch (error) {
-        console.error('Processing error:', error);
+        console.error('Cropping and processing failed:', error);
         const errorMessage = error instanceof Error ? error.message : String(error);
         setWorkspaceError(`OCR FAILED: ${errorMessage}`);
-      } finally {
         setIsPreparing(false);
-        setTimeout(() => {
-          setIsProcessing(false);
-        }, 3000);
+        setIsProcessing(false);
       }
-    } catch (error) {
-      console.error('Cropping and processing failed:', error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      setWorkspaceError(`OCR FAILED: ${errorMessage}`);
-      setIsPreparing(false);
-      setIsProcessing(false);
+    } finally {
+      isScanRunningRef.current = false;
     }
   };
 

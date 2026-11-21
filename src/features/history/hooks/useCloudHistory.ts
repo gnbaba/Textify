@@ -40,26 +40,35 @@ export const useCloudHistory = (userId: string | undefined) => {
   const [pageSize, setPageSize] = useState<number>(25);
   const [hasMore, setHasMore] = useState<boolean>(false);
   const ensureDocumentRequestsRef = useRef(new Map<string, Promise<CloudWriteResult>>());
+  const previousUserIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    if (!userId) {
+    const userIdChanged = previousUserIdRef.current !== userId;
+    if (userIdChanged) {
+      previousUserIdRef.current = userId;
       setDocuments([]);
-      setIsLoading(false);
+      setError(null);
       setHasMore(false);
+      setPageSize(25);
+    }
+
+    if (!userId) {
+      setIsLoading(false);
       return;
     }
 
+    const effectivePageSize = userIdChanged ? 25 : pageSize;
     setIsLoading(true);
     const documentsRef = collection(db, 'users', userId, 'documents');
-    const q = query(documentsRef, orderBy('timestamp', 'desc'), limit(pageSize + 1));
+    const q = query(documentsRef, orderBy('timestamp', 'desc'), limit(effectivePageSize + 1));
 
     const unsubscribe = onSnapshot(
       q,
       (querySnapshot) => {
-        const hasMoreDocs = querySnapshot.docs.length > pageSize;
+        const hasMoreDocs = querySnapshot.docs.length > effectivePageSize;
         setHasMore(hasMoreDocs);
         const docsToProcess = hasMoreDocs
-          ? querySnapshot.docs.slice(0, pageSize)
+          ? querySnapshot.docs.slice(0, effectivePageSize)
           : querySnapshot.docs;
 
         const fetchedDocs: CloudDocument[] = docsToProcess.map((docSnapshot) => {

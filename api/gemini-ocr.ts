@@ -58,6 +58,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   const base64Data = imageBase64.replace(/^data:image\/[^;]+;base64,/, '').trim();
   const byteLength = Buffer.byteLength(base64Data, 'base64');
+  if (!base64Data || byteLength === 0) {
+    res.status(400).json({ error: 'Image payload cannot be empty.' });
+    return;
+  }
   if (byteLength > 2.5 * 1024 * 1024) {
     res.status(413).json({ error: 'Payload Too Large: image exceeds 2.5MB cap.' });
     return;
@@ -179,6 +183,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
 
     const candidate = resJson.candidates[0];
+    if (candidate.finishReason && candidate.finishReason !== 'STOP') {
+      res.status(422).json({
+        error: `Cloud AI output was truncated (${candidate.finishReason}). Try cropping a smaller region.`,
+      });
+      return;
+    }
+
     const rawParts = candidate.content?.parts || [];
     const textParts = rawParts
       .filter((part) => !part.thought && typeof part.text === 'string')

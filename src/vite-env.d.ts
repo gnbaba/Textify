@@ -14,7 +14,11 @@ interface LenisInstance {
   ) => void;
 }
 
-interface Window {
-  __lenis?: LenisInstance;
-  __ScrollTrigger?: unknown;
+declare global {
+  interface Window {
+    __lenis?: LenisInstance;
+    __ScrollTrigger?: unknown;
+  }
 }
+
+export {};

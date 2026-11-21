@@ -1,6 +1,9 @@
 import { Check, Copy, Download, FileJson, FileText, Printer, Table, X } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { ExtractionBlock } from '../../history/hooks/useCloudHistory';
+
+const FOCUSABLE_SELECTOR =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -62,6 +65,67 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const [isExporting, setIsExporting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [fontError, setFontError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    previouslyFocusedRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    const dialog = dialogRef.current;
+    const firstFocusable = dialog?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+    (firstFocusable ?? dialog)?.focus();
+
+    return () => {
+      const previouslyFocused = previouslyFocusedRef.current;
+      previouslyFocusedRef.current = null;
+      if (previouslyFocused?.isConnected) {
+        previouslyFocused.focus();
+      }
+    };
+  }, [isOpen]);
+
+  const handleDialogKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape') {
+      if (!isExporting) {
+        event.preventDefault();
+        onClose();
+      }
+      return;
+    }
+
+    if (event.key !== 'Tab') return;
+
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+      (element) =>
+        !element.hasAttribute('disabled') && element.getAttribute('aria-hidden') !== 'true'
+    );
+
+    if (focusable.length === 0) {
+      event.preventDefault();
+      dialog.focus();
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+
+    if (event.shiftKey) {
+      if (active === first || !dialog.contains(active)) {
+        event.preventDefault();
+        last.focus();
+      }
+    } else if (active === last || !dialog.contains(active)) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -174,10 +238,20 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#20251F]/50 backdrop-blur-sm px-4 font-mono-industrial text-[#20251F]">
-      <div className="bg-[#FFFDF7] w-full max-w-2xl border border-[#20251F] shadow-drafting-lg flex flex-col max-h-[90vh] overflow-hidden">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="export-modal-title"
+        tabIndex={-1}
+        onKeyDown={handleDialogKeyDown}
+        className="bg-[#FFFDF7] w-full max-w-2xl border border-[#20251F] shadow-drafting-lg flex flex-col max-h-[90vh] overflow-hidden"
+      >
         {/* Header */}
         <div className="px-6 py-3 border-b border-[#20251F]/15 flex justify-between items-center bg-[#20251F] text-[#FFFDF7]">
-          <h3 className="text-xs font-black uppercase tracking-[0.15em]">[ EXPORT DOCUMENT ]</h3>
+          <h3 id="export-modal-title" className="text-xs font-black uppercase tracking-[0.15em]">
+            [ EXPORT DOCUMENT ]
+          </h3>
           <button
             onClick={onClose}
             className="text-[#FFFDF7]/70 hover:text-[#E96C3F] transition-colors cursor-pointer"
