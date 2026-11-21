@@ -1,14 +1,14 @@
 import {
+  AlertTriangle,
   ArrowLeft,
   BookOpen,
-  CaretRight,
+  ChevronRight,
   Cpu,
-  FolderSimple,
-  GithubLogo,
+  Folder,
+  GitBranch,
   ShieldCheck,
-  Sparkle,
-  Warning,
-} from '@phosphor-icons/react';
+  Sparkles,
+} from 'lucide-react';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -47,7 +47,7 @@ export const DocsPage = () => {
               className="p-1.5 border border-[#20251F]/20 hover:border-[#20251F] hover:bg-[#20251F]/5 transition-colors flex items-center justify-center relative z-10"
               aria-label="Go back"
             >
-              <ArrowLeft className="w-4 h-4" weight="bold" />
+              <ArrowLeft className="w-4 h-4" />
             </Link>
             <span className="font-mono-industrial text-[11px] font-bold tracking-[0.1em] uppercase flex items-center gap-1.5 text-[#20251F]">
               TEXTIFY<span className="text-[#20251F]/30">/</span>DOCS
@@ -86,7 +86,7 @@ export const DocsPage = () => {
               >
                 <span>{sec.title}</span>
                 {activeSection === sec.id && (
-                  <CaretRight className="w-3.5 h-3.5 text-[#D9E4CB]" weight="bold" />
+                  <ChevronRight className="w-3.5 h-3.5 text-[#D9E4CB]" />
                 )}
               </button>
             ))}
@@ -121,8 +121,7 @@ export const DocsPage = () => {
           {/* Section 01: Overview */}
           <section id="overview" className="border-b border-[#20251F]/20 pb-8 space-y-4">
             <div className="flex items-center gap-2 font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase text-[#20251F]/50">
-              <Sparkle className="w-4 h-4 text-[#E96C3F]" weight="bold" /> 01 / OVERVIEW & CORE
-              FEATURES
+              <Sparkles className="w-4 h-4 text-[#E96C3F]" /> 01 / OVERVIEW & CORE FEATURES
             </div>
             <h2 className="text-2xl font-black uppercase tracking-tight text-[#20251F]">
               LOCAL TRANSLATION PIPELINE
@@ -171,7 +170,7 @@ export const DocsPage = () => {
           {/* Section 02: Architecture */}
           <section id="architecture" className="border-b border-[#20251F]/20 pb-8 space-y-4">
             <div className="flex items-center gap-2 font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase text-[#20251F]/50">
-              <Cpu className="w-4 h-4 text-[#214C3A]" weight="bold" /> 02 / WORKSPACE STRUCTURE
+              <Cpu className="w-4 h-4 text-[#214C3A]" /> 02 / WORKSPACE STRUCTURE
             </div>
             <h2 className="text-2xl font-black uppercase tracking-tight text-[#20251F]">
               MODULAR SOURCE DIRECTORY
@@ -185,7 +184,7 @@ export const DocsPage = () => {
               {/* Directory Map */}
               <div className="bg-[#FFFDF7] border border-[#20251F]/20 p-4 font-mono-industrial text-[10px] text-[#20251F] leading-relaxed shadow-drafting-sm">
                 <div className="flex items-center gap-2 mb-2 pb-1 border-b border-[#20251F]/10 font-bold uppercase text-[#20251F]/80">
-                  <FolderSimple className="w-4 h-4 text-[#214C3A]" /> Source Directory Map
+                  <Folder className="w-4 h-4 text-[#214C3A]" /> Source Directory Map
                 </div>
                 <div>src/</div>
                 <div className="pl-4">
@@ -257,8 +256,7 @@ export const DocsPage = () => {
           {/* Section 03: Database/Firestore */}
           <section id="database" className="border-b border-[#20251F]/20 pb-8 space-y-4">
             <div className="flex items-center gap-2 font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase text-[#20251F]/50">
-              <ShieldCheck className="w-4 h-4 text-[#214C3A]" weight="bold" /> 03 / FIRESTORE
-              SCHEMAS & SECURITIES
+              <ShieldCheck className="w-4 h-4 text-[#214C3A]" /> 03 / FIRESTORE SCHEMAS & SECURITIES
             </div>
             <h2 className="text-2xl font-black uppercase tracking-tight text-[#20251F]">
               STRUCTURED CLOUD STORAGE
@@ -365,8 +363,7 @@ export async function reorderBlocks(
           {/* Section 04: SOLID Coding Standards */}
           <section id="solid" className="border-b border-[#20251F]/20 pb-8 space-y-4">
             <div className="flex items-center gap-2 font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase text-[#20251F]/50">
-              <Cpu className="w-4 h-4 text-[#214C3A]" weight="bold" /> 04 / ARCHITECTURE & CORE
-              SERVICES
+              <Cpu className="w-4 h-4 text-[#214C3A]" /> 04 / ARCHITECTURE & CORE SERVICES
             </div>
             <h2 className="text-2xl font-black uppercase tracking-tight text-[#20251F]">
               STRICT IMPLEMENTATION FLOW
@@ -433,8 +430,7 @@ export const useOcrProcessor = (ocrService: IOcrService) => {
           {/* Section 05: Developer Notes */}
           <section id="developer" className="pb-8 space-y-4">
             <div className="flex items-center gap-2 font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase text-[#20251F]/50">
-              <Warning className="w-4 h-4 text-[#E96C3F]" weight="bold" /> 05 / DEV LOGS &
-              DISCLAIMER
+              <AlertTriangle className="w-4 h-4 text-[#E96C3F]" /> 05 / DEV LOGS & DISCLAIMER
             </div>
             <h2 className="text-2xl font-black uppercase tracking-tight text-[#20251F]">
               DEVELOPMENT REFLECTION INDEX
@@ -473,7 +469,7 @@ export const useOcrProcessor = (ocrService: IOcrService) => {
                   rel="noopener noreferrer"
                   className="bg-[#214C3A] text-[#FFFDF7] px-5 py-2.5 font-mono-industrial text-[10px] font-bold tracking-[0.1em] uppercase hover:bg-[#183a2b] active:scale-[0.98] transition-all flex items-center gap-1.5 shadow-drafting-sm cursor-pointer"
                 >
-                  <GithubLogo className="w-4 h-4" weight="bold" /> Github Repo
+                  <GitBranch className="w-4 h-4" /> Github Repo
                 </a>
                 <Link
                   to="/"

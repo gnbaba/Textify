@@ -1,14 +1,7 @@
 import { useGSAP } from '@gsap/react';
-import {
-  BoundingBox,
-  Crosshair,
-  FileText,
-  LockKey,
-  ShieldCheck,
-  UploadSimple,
-} from '@phosphor-icons/react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Lock } from 'lucide-react';
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { VectorSubstrateCard } from './VectorSubstrateCard';
@@ -561,8 +554,8 @@ export const PipelineWorkflowSection: React.FC = () => {
     const target = index === 0 ? card1Ref.current : card2Ref.current;
     if (!target) return;
 
-    if (typeof window !== 'undefined' && (window as any).__lenis) {
-      (window as any).__lenis.scrollTo(target, { offset: -90, duration: 0.8 });
+    if (typeof window !== 'undefined' && window.__lenis) {
+      window.__lenis.scrollTo(target, { offset: -90, duration: 0.8 });
     } else if (typeof window !== 'undefined') {
       const top = target.getBoundingClientRect().top + window.scrollY - 90;
       window.scrollTo({ top, behavior: 'smooth' });
@@ -1047,7 +1040,7 @@ export const PipelineWorkflowSection: React.FC = () => {
 
                 <div className="flex items-center justify-between py-2 border-b border-[#20251F]/10 font-mono-industrial text-[8px] text-[#20251F]/60">
                   <div className="flex items-center gap-2">
-                    <LockKey className="w-3 h-3 text-[#214C3A]" />
+                    <Lock className="w-3 h-3 text-[#214C3A]" />
                     <span className="font-mono text-[#20251F]/80">app.textify.dev/workspace</span>
                   </div>
                   <span className="text-[#214C3A] font-bold">[AIR-GAPPED PROTOCOL]</span>
@@ -1176,7 +1169,7 @@ export const PipelineWorkflowSection: React.FC = () => {
 
                 <div className="flex items-center justify-between py-2 border-b border-[#FFFDF7]/10 font-mono text-[8px] text-[#FFFDF7]/60">
                   <div className="flex items-center gap-2">
-                    <LockKey className="w-3 h-3 text-[#E96C3F]" />
+                    <Lock className="w-3 h-3 text-[#E96C3F]" />
                     <span>api.textify.dev/api/gemini-ocr</span>
                   </div>
                   <span className="text-[#E96C3F] font-bold">[20 SCANS / DAY QUOTA]</span>
@@ -1415,7 +1408,7 @@ export const PipelineWorkflowSection: React.FC = () => {
           </div>
 
           {/* ───────────────────────────────────────────────────────────
-              STAGE 2: RADON DESKEW (Action Bar Left • Visual Right)
+              STAGE 2: ADAPTIVE THRESHOLD (Action Bar Left • Visual Right)
               ─────────────────────────────────────────────────────────── */}
           <div
             ref={stage2Ref}
@@ -1448,7 +1441,7 @@ export const PipelineWorkflowSection: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#E96C3F] animate-pulse" />
                     <span className="font-black text-xs sm:text-sm tracking-widest text-[#FFFDF7] uppercase">
-                      [02] RADON DESKEW
+                      [02] ADAPTIVE THRESHOLD
                     </span>
                   </div>
                   <span className="font-mono text-[10px] sm:text-xs text-[#FFFDF7]/85 tracking-wide text-right">

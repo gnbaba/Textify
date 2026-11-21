@@ -13,10 +13,13 @@ export const BookExcerptPaper: React.FC = () => {
       {/* Literary Typography Prose */}
       <div className="space-y-1.5 my-auto text-justify">
         <p className="indent-2">
-          Between the quiet margins of the paper floor, every glyph awaits the beam of sight. Neither stone nor marble resists the digital archive; words whispered long ago find memory inside the machine.
+          Between the quiet margins of the paper floor, every glyph awaits the beam of sight.
+          Neither stone nor marble resists the digital archive; words whispered long ago find memory
+          inside the machine.
         </p>
         <p className="indent-2 text-[#20251F]/75">
-          In darkness and in sunlight, character by character assembled, the engine translates ink into boundless thought.
+          In darkness and in sunlight, character by character assembled, the engine translates ink
+          into boundless thought.
         </p>
       </div>
 

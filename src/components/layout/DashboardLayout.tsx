@@ -130,13 +130,16 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
 
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
   useEffect(() => {
-    setAvatarLoadFailed(false);
+    if (user?.photoURL) {
+      setAvatarLoadFailed(false);
+    } else {
+      setAvatarLoadFailed(false);
+    }
   }, [user?.photoURL]);
 
   const handleMobileNavClose = () => {
     if (window.innerWidth < 768) setIsSidebarOpen(false);
   };
-
 
   return (
     <div className="flex h-screen bg-[#F3EFE3] overflow-hidden font-mono-industrial relative text-[#20251F]">

@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
+import { describe, expect, it } from 'vitest';
 import { PipelineWorkflowSection } from '../PipelineWorkflowSection';
 
 describe('PipelineWorkflowSection (Vector Assembly Architecture)', () => {
@@ -14,7 +14,9 @@ describe('PipelineWorkflowSection (Vector Assembly Architecture)', () => {
 
     // Title 1 & Title 2 text headings are present for initial narrative stages
     expect(screen.getByRole('heading', { name: /Right inside your browser/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /For every complex document/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /For every complex document/i })
+    ).toBeInTheDocument();
 
     // Bottom status ticker strip (Image 4) remains permanently removed
     expect(screen.queryByText(/SUBSTRATE STATUS: CONVERGED AT \(0, 0\)/i)).not.toBeInTheDocument();
@@ -43,7 +45,7 @@ describe('PipelineWorkflowSection (Vector Assembly Architecture)', () => {
 
     // Verify 4 action bars are rendered
     expect(screen.getByText(/\[01\] INGEST/i)).toBeInTheDocument();
-    expect(screen.getByText(/\[02\] RADON DESKEW/i)).toBeInTheDocument();
+    expect(screen.getByText(/\[02\] ADAPTIVE THRESHOLD/i)).toBeInTheDocument();
     expect(screen.getByText(/\[03\] THRESHOLD & WASM/i)).toBeInTheDocument();
     expect(screen.getByText(/\[04\] STRUCTURE/i)).toBeInTheDocument();
 

@@ -1,7 +1,7 @@
-import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Trash2, Copy, Check, GripVertical } from 'lucide-react';
+import { Check, Copy, GripVertical, Trash2 } from 'lucide-react';
+import React from 'react';
 
 export interface BlockCardProps {
   id: string;
@@ -61,17 +61,16 @@ export const BlockCard: React.FC<BlockCardProps> = ({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="p-4 md:p-5">
-            <textarea
-              readOnly
-              value={text}
-              tabIndex={isOverlay ? -1 : undefined}
-              className="w-full h-40 md:h-48 p-4 resize-y focus:outline-none bg-[#FFFDF7] border border-[#20251F]/15 focus:border-[#20251F] text-[#20251F] font-mono text-xs md:text-sm leading-relaxed whitespace-pre-wrap break-words"
-            />
+            <div className="w-full min-h-[140px] p-4 bg-[#FFFDF7] border border-[#20251F]/15 font-mono text-xs md:text-sm leading-relaxed whitespace-pre-wrap break-words select-text text-[#20251F]">
+              {text}
+            </div>
           </div>
 
           <div className="px-4 md:px-5 py-2.5 bg-[#F3EFE3]/30 border-t border-[#20251F]/15 flex flex-wrap justify-between items-center gap-3">
             {/* Selector Checkbox */}
-            <label className={`flex items-center gap-2 select-none ${isOverlay ? 'pointer-events-none' : 'cursor-pointer group'}`}>
+            <label
+              className={`flex items-center gap-2 select-none ${isOverlay ? 'pointer-events-none' : 'cursor-pointer group'}`}
+            >
               <div
                 className={`w-4 h-4 border flex items-center justify-center transition-colors ${
                   isSelected
@@ -137,47 +136,36 @@ export interface SortableBlockProps {
   onToggleSelect: () => void;
 }
 
-export const SortableBlock: React.FC<SortableBlockProps> = React.memo(({
-  id,
-  text,
-  onCopy,
-  onDelete,
-  isCopied,
-  isSelected,
-  onToggleSelect,
-}) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id });
+export const SortableBlock: React.FC<SortableBlockProps> = React.memo(
+  ({ id, text, onCopy, onDelete, isCopied, isSelected, onToggleSelect }) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+      id,
+    });
 
-  const style: React.CSSProperties = {
-    transform: CSS.Translate.toString(transform),
-    transition: isDragging ? undefined : transition,
-  };
+    const style: React.CSSProperties = {
+      transform: CSS.Translate.toString(transform),
+      transition: isDragging ? undefined : transition,
+    };
 
-  return (
-    <div ref={setNodeRef} style={style}>
-      <BlockCard
-        id={id}
-        text={text}
-        onCopy={onCopy}
-        onDelete={onDelete}
-        isCopied={isCopied}
-        isSelected={isSelected}
-        onToggleSelect={onToggleSelect}
-        isDragging={isDragging}
-        dragHandleProps={{
-          attributes: attributes as unknown as Record<string, unknown>,
-          listeners: listeners as unknown as Record<string, unknown>,
-        }}
-      />
-    </div>
-  );
-});
+    return (
+      <div ref={setNodeRef} style={style}>
+        <BlockCard
+          id={id}
+          text={text}
+          onCopy={onCopy}
+          onDelete={onDelete}
+          isCopied={isCopied}
+          isSelected={isSelected}
+          onToggleSelect={onToggleSelect}
+          isDragging={isDragging}
+          dragHandleProps={{
+            attributes: attributes as unknown as Record<string, unknown>,
+            listeners: listeners as unknown as Record<string, unknown>,
+          }}
+        />
+      </div>
+    );
+  }
+);
 
 SortableBlock.displayName = 'SortableBlock';

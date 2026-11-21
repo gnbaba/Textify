@@ -5,6 +5,7 @@
     "includes": [
       "src/**",
       "api/**",
+      "tests/**",
       "*.json",
       "*.ts",
       "*.html",

@@ -25,7 +25,9 @@ export const NotebookPaper: React.FC = () => {
         <div className="space-y-2 text-[7.5px] sm:text-[8.5px] text-[#20251F]/85 font-mono">
           <div className="border-b border-[#7B9EC6]/40 pb-0.5 flex items-center gap-1.5">
             <span className="text-[#E96C3F] font-bold">☑</span>
-            <span className="line-through text-[#20251F]/50 font-serif italic">Donation inquiry</span>
+            <span className="line-through text-[#20251F]/50 font-serif italic">
+              Donation inquiry
+            </span>
           </div>
           <div className="border-b border-[#7B9EC6]/40 pb-0.5 flex items-center gap-1.5">
             <span className="text-[#E96C3F] font-bold">☑</span>

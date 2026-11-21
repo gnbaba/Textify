@@ -1,16 +1,16 @@
-import { useState, useEffect } from 'react';
-import { 
-  onAuthStateChanged, 
-  User, 
-  signInWithPopup, 
-  GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult, 
-  signOut,
-  setPersistence,
+import {
   browserLocalPersistence,
-  browserSessionPersistence
+  browserSessionPersistence,
+  GoogleAuthProvider,
+  getRedirectResult,
+  onAuthStateChanged,
+  setPersistence,
+  signInWithPopup,
+  signInWithRedirect,
+  signOut,
+  User,
 } from 'firebase/auth';
+import { useEffect, useState } from 'react';
 import { auth } from '../../../config/firebase';
 
 export const useAuth = () => {
@@ -23,11 +23,11 @@ export const useAuth = () => {
       try {
         await getRedirectResult(auth);
       } catch (err) {
-        console.error("Failed to process redirect login:", err);
-        setError("Authentication failed. Please try again.");
+        console.error('Failed to process redirect login:', err);
+        setError('Authentication failed. Please try again.');
       }
     };
-    
+
     checkRedirect();
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -47,7 +47,7 @@ export const useAuth = () => {
       await setPersistence(auth, persistenceType);
 
       const provider = new GoogleAuthProvider();
-      
+
       // Force the account chooser
       provider.setCustomParameters({ prompt: 'select_account' });
 
@@ -62,8 +62,8 @@ export const useAuth = () => {
         await signInWithPopup(auth, provider);
       }
     } catch (err) {
-      console.error("Failed to log in with Google:", err);
-      setError("Login was cancelled or encountered an error. Please try again.");
+      console.error('Failed to log in with Google:', err);
+      setError('Login was cancelled or encountered an error. Please try again.');
     }
   };
 
@@ -72,8 +72,8 @@ export const useAuth = () => {
       setError(null);
       await signOut(auth);
     } catch (err) {
-      console.error("Failed to log out:", err);
-      setError("Failed to sign out. Please check your connection.");
+      console.error('Failed to log out:', err);
+      setError('Failed to sign out. Please check your connection.');
     }
   };
 

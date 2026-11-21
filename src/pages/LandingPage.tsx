@@ -1,47 +1,33 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { PipelineWorkflowSection } from '../components/landing/PipelineWorkflowSection';
-import { HeroDraftingCanvas } from '../components/landing/HeroDraftingCanvas';
-import { TriangleFlipBackground } from '../components/landing/TriangleFlipBackground';
-import Lenis from 'lenis';
-import {
-  Sparkle,
-  ListBullets,
-  Copy,
-  Check,
-  Lightning,
-  ArrowRight,
-  ArrowUpRight,
-  LockKey,
-  CheckCircle,
-  ArrowUp,
-  X,
-  List,
-  CursorClick,
-  Code,
-  Bug,
-  Chats,
-  GithubLogo,
-  BookOpen,
-  ShieldCheck,
-  Cpu,
-  BoundingBox,
-  FileText,
-  Terminal,
-  Crosshair,
-  Plus,
-  Minus,
-  CaretDown,
-  ArrowsOut,
-  Sliders,
-  Receipt,
-  Scales,
-  Compass,
-  IdentificationCard,
-} from '@phosphor-icons/react';
+import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { useGSAP } from '@gsap/react';
+import Lenis from 'lenis';
+import {
+  ArrowRight,
+  ArrowUp,
+  ArrowUpRight,
+  BookOpen,
+  Box,
+  Bug,
+  Check,
+  CheckCircle,
+  Code,
+  Copy,
+  Cpu,
+  FileText,
+  GitBranch,
+  Lock,
+  Menu,
+  MessageSquare,
+  ShieldCheck,
+  X,
+  Zap,
+} from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { HeroDraftingCanvas } from '../components/landing/HeroDraftingCanvas';
+import { PipelineWorkflowSection } from '../components/landing/PipelineWorkflowSection';
+import { TriangleFlipBackground } from '../components/landing/TriangleFlipBackground';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -102,10 +88,10 @@ const LEGAL_CONTENT = {
 const MARQUEE_ITEMS = [
   { label: 'LOCAL-FIRST PRIVACY', icon: ShieldCheck, color: 'text-[#E96C3F]' },
   { label: 'OPTIONAL CLOUD AI', icon: Cpu, color: 'text-[#214C3A]' },
-  { label: 'CANVAS PREPROCESS', icon: BoundingBox, color: 'text-[#E96C3F]' },
+  { label: 'CANVAS PREPROCESS', icon: Box, color: 'text-[#E96C3F]' },
   { label: 'SELECTIVE PDF EXPORT', icon: FileText, color: 'text-[#214C3A]' },
-  { label: 'TESSERACT WASM', icon: Lightning, color: 'text-[#E96C3F]' },
-  { label: 'PRIVACY BY DEFAULT', icon: LockKey, color: 'text-[#214C3A]' },
+  { label: 'TESSERACT WASM', icon: Zap, color: 'text-[#E96C3F]' },
+  { label: 'PRIVACY BY DEFAULT', icon: Lock, color: 'text-[#214C3A]' },
 ];
 
 // -- Component --
@@ -150,8 +136,8 @@ export const LandingPage = () => {
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
     });
-    (window as any).__lenis = lenis;
-    (window as any).__ScrollTrigger = ScrollTrigger;
+    window.__lenis = lenis;
+    window.__ScrollTrigger = ScrollTrigger;
 
     // Lock smooth wheel/touch scrolling until intro animation completes
     if (!isIntroCompleteRef.current) {
@@ -165,33 +151,36 @@ export const LandingPage = () => {
     gsap.ticker.add(tickerCallback);
     gsap.ticker.lagSmoothing(0);
 
-    const handleScroll = (e?: any) => {
-      const currentScrollY = typeof e?.scroll === 'number' ? e.scroll : window.scrollY;
-      setShowTopBtn(currentScrollY > 400);
+    const handleScroll = (e?: { scroll?: number; direction?: number } | Event) => {
+      const scrollVal =
+        e && 'scroll' in e && typeof e.scroll === 'number' ? e.scroll : window.scrollY;
+      const dirVal = e && 'direction' in e ? e.direction : undefined;
+      setShowTopBtn(scrollVal > 400);
 
       // Smooth architectural header hide when scrolling down past hero, reveal on scroll up
-      if (currentScrollY <= 220) {
+      if (scrollVal <= 220) {
         setIsHeaderVisible(true);
-      } else if (e?.direction === 1) {
+      } else if (dirVal === 1) {
         setIsHeaderVisible(false);
-      } else if (e?.direction === -1) {
+      } else if (dirVal === -1) {
         setIsHeaderVisible(true);
       } else {
-        const diff = currentScrollY - lastScrollYRef.current;
+        const diff = scrollVal - lastScrollYRef.current;
         if (diff > 4) {
           setIsHeaderVisible(false);
         } else if (diff < -4) {
           setIsHeaderVisible(true);
         }
       }
-      lastScrollYRef.current = currentScrollY;
+      lastScrollYRef.current = scrollVal;
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    const handleWindowScroll = (e: Event) => handleScroll(e);
+    window.addEventListener('scroll', handleWindowScroll, { passive: true });
     lenis.on('scroll', handleScroll);
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', handleWindowScroll);
       lenis.off('scroll', handleScroll);
       gsap.ticker.remove(tickerCallback);
       lenis.destroy();
@@ -233,8 +222,8 @@ export const LandingPage = () => {
       }
       window.scrollTo(0, 0);
 
-      if (typeof window !== 'undefined' && (window as any).__lenis) {
-        (window as any).__lenis.stop();
+      if (typeof window !== 'undefined' && window.__lenis) {
+        window.__lenis.stop();
       }
       document.documentElement.style.overflow = 'hidden';
       document.body.style.overflow = 'hidden';
@@ -317,8 +306,8 @@ export const LandingPage = () => {
           }
 
           // Unlock scrolling & restore normal interaction
-          if (typeof window !== 'undefined' && (window as any).__lenis) {
-            (window as any).__lenis.start();
+          if (typeof window !== 'undefined' && window.__lenis) {
+            window.__lenis.start();
           }
           document.documentElement.style.overflow = '';
           document.body.style.overflow = '';
@@ -413,8 +402,8 @@ export const LandingPage = () => {
       return () => {
         introTl.kill();
         isIntroCompleteRef.current = true;
-        if (typeof window !== 'undefined' && (window as any).__lenis) {
-          (window as any).__lenis.start();
+        if (typeof window !== 'undefined' && window.__lenis) {
+          window.__lenis.start();
         }
         document.documentElement.style.overflow = '';
         document.body.style.overflow = '';
@@ -787,11 +776,7 @@ export const LandingPage = () => {
               aria-label="Toggle menu"
             >
               <div className="header-nav-divider absolute top-0 bottom-0 left-0 border-l border-[#20251F]/20 origin-top pointer-events-none z-30 md:hidden" />
-              {mobileMenuOpen ? (
-                <X className="w-5 h-5" weight="bold" />
-              ) : (
-                <List className="w-5 h-5" weight="bold" />
-              )}
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </nav>
@@ -901,7 +886,7 @@ export const LandingPage = () => {
                 <div className="animate-infinite-marquee-slow flex items-center shrink-0">
                   {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, idx) => (
                     <div key={`m1-${idx}`} className="flex items-center gap-2 px-3.5">
-                      <item.icon className={`w-3.5 h-3.5 ${item.color} shrink-0`} weight="bold" />
+                      <item.icon className={`w-3.5 h-3.5 ${item.color} shrink-0`} />
                       <span className="font-mono-industrial text-[9px] font-bold tracking-[0.2em] text-[#20251F] whitespace-nowrap">
                         {item.label}
                       </span>
@@ -917,7 +902,7 @@ export const LandingPage = () => {
                 >
                   {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, idx) => (
                     <div key={`m2-${idx}`} className="flex items-center gap-2 px-3.5">
-                      <item.icon className={`w-3.5 h-3.5 ${item.color} shrink-0`} weight="bold" />
+                      <item.icon className={`w-3.5 h-3.5 ${item.color} shrink-0`} />
                       <span className="font-mono-industrial text-[9px] font-bold tracking-[0.2em] text-[#20251F] whitespace-nowrap">
                         {item.label}
                       </span>
@@ -1596,14 +1581,14 @@ export const LandingPage = () => {
             onMouseMove={handleMagneticMove}
             onMouseLeave={handleMagneticLeave}
           >
-            <GithubLogo className="w-4 h-4" weight="bold" />
+            <GitBranch className="w-4 h-4" />
             View on GitHub
           </a>
           <Link
             to="/docs"
             className="os-btn btn-border-expand border border-[#20251F]/30 bg-transparent text-[#20251F] px-6 py-3 font-mono-industrial text-[10px] md:text-[11px] font-bold tracking-[0.1em] uppercase hover:bg-[#20251F]/5 active:scale-[0.98] transition-all flex items-center gap-2 relative z-10 cursor-pointer"
           >
-            <BookOpen className="w-4 h-4" weight="bold" />
+            <BookOpen className="w-4 h-4" />
             Documentation
           </Link>
         </div>
@@ -1625,10 +1610,7 @@ export const LandingPage = () => {
                 <span className="font-mono-industrial text-[9px] font-bold tracking-[0.15em] text-[#20251F]/50">
                   [01 / CODE]
                 </span>
-                <Code
-                  className="w-5 h-5 text-[#20251F]/40 group-hover:text-[#214C3A] group-hover:scale-110 transition-all duration-300"
-                  weight="bold"
-                />
+                <Code className="w-5 h-5 text-[#20251F]/40 group-hover:text-[#214C3A] group-hover:scale-110 transition-all duration-300" />
               </div>
               <h3 className="text-lg font-black uppercase tracking-tight mb-2 text-[#20251F]">
                 Code Contributions
@@ -1639,7 +1621,7 @@ export const LandingPage = () => {
               </p>
             </div>
             <div className="mt-4 font-mono-industrial text-[9px] font-bold text-[#20251F]/50 group-hover:text-[#214C3A] transition-colors flex items-center gap-1.5 w-full">
-              INITIALIZE CONTRIBUTION <ArrowRight className="w-3.5 h-3.5" weight="bold" />
+              INITIALIZE CONTRIBUTION <ArrowRight className="w-3.5 h-3.5" />
             </div>
           </button>
 
@@ -1661,10 +1643,7 @@ export const LandingPage = () => {
                 <span className="font-mono-industrial text-[9px] font-bold tracking-[0.15em] text-[#20251F]/50">
                   [02 / BUG]
                 </span>
-                <Bug
-                  className="w-5 h-5 text-[#20251F]/40 group-hover:text-[#E96C3F] group-hover:scale-110 transition-all duration-300"
-                  weight="bold"
-                />
+                <Bug className="w-5 h-5 text-[#20251F]/40 group-hover:text-[#E96C3F] group-hover:scale-110 transition-all duration-300" />
               </div>
               <h3 className="text-lg font-black uppercase tracking-tight mb-2 text-[#20251F]">
                 Report Bugs
@@ -1675,7 +1654,7 @@ export const LandingPage = () => {
               </p>
             </div>
             <div className="mt-4 font-mono-industrial text-[9px] font-bold text-[#20251F]/50 group-hover:text-[#E96C3F] transition-colors flex items-center gap-1.5 w-full">
-              SUBMIT ERROR REPORT <ArrowRight className="w-3.5 h-3.5" weight="bold" />
+              SUBMIT ERROR REPORT <ArrowRight className="w-3.5 h-3.5" />
             </div>
           </button>
 
@@ -1697,10 +1676,7 @@ export const LandingPage = () => {
                 <span className="font-mono-industrial text-[9px] font-bold tracking-[0.15em] text-[#20251F]/50">
                   [03 / CHAT]
                 </span>
-                <Chats
-                  className="w-5 h-5 text-[#20251F]/40 group-hover:text-[#214C3A] group-hover:scale-110 transition-all duration-300"
-                  weight="bold"
-                />
+                <MessageSquare className="w-5 h-5 text-[#20251F]/40 group-hover:text-[#214C3A] group-hover:scale-110 transition-all duration-300" />
               </div>
               <h3 className="text-lg font-black uppercase tracking-tight mb-2 text-[#20251F]">
                 Share Feedback
@@ -1711,7 +1687,7 @@ export const LandingPage = () => {
               </p>
             </div>
             <div className="mt-4 font-mono-industrial text-[9px] font-bold text-[#20251F]/50 group-hover:text-[#214C3A] transition-colors flex items-center gap-1.5 w-full">
-              TRANSMIT INSIGHTS <ArrowRight className="w-3.5 h-3.5" weight="bold" />
+              TRANSMIT INSIGHTS <ArrowRight className="w-3.5 h-3.5" />
             </div>
           </button>
         </div>
@@ -1752,7 +1728,7 @@ export const LandingPage = () => {
               onMouseMove={handleMagneticMove}
               onMouseLeave={handleMagneticLeave}
             >
-              LAUNCH WORKSPACE <ArrowRight className="w-4 h-4" weight="bold" />
+              LAUNCH WORKSPACE <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
@@ -1814,10 +1790,7 @@ export const LandingPage = () => {
                       : 'DIAGNOSTIC SUPPORT'}{' '}
                   ]
                 </span>
-                <ArrowRight
-                  className="w-3.5 h-3.5 text-[#20251F]/50 group-hover:text-[#214C3A] group-hover:translate-x-1 transition-all"
-                  weight="bold"
-                />
+                <ArrowRight className="w-3.5 h-3.5 text-[#20251F]/50 group-hover:text-[#214C3A] group-hover:translate-x-1 transition-all" />
               </button>
             ))}
           </div>
@@ -1834,20 +1807,14 @@ export const LandingPage = () => {
               className="group text-[#20251F]/70 hover:text-[#214C3A] transition-colors py-1 border-b border-[#20251F]/10 flex items-center justify-between"
             >
               <span>GITHUB REPOSITORY</span>
-              <ArrowUpRight
-                className="w-3.5 h-3.5 text-[#20251F]/50 group-hover:text-[#214C3A] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all"
-                weight="bold"
-              />
+              <ArrowUpRight className="w-3.5 h-3.5 text-[#20251F]/50 group-hover:text-[#214C3A] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
             </a>
             <Link
               to="/docs"
               className="group text-[#20251F]/70 hover:text-[#214C3A] transition-colors py-1 border-b border-[#20251F]/10 flex items-center justify-between"
             >
               <span>TECHNICAL DOCS</span>
-              <ArrowRight
-                className="w-3.5 h-3.5 text-[#20251F]/50 group-hover:text-[#214C3A] group-hover:translate-x-1 transition-all"
-                weight="bold"
-              />
+              <ArrowRight className="w-3.5 h-3.5 text-[#20251F]/50 group-hover:text-[#214C3A] group-hover:translate-x-1 transition-all" />
             </Link>
             <div className="text-[#20251F]/50 py-1 flex items-center justify-between">
               <span>MAINTAINER</span>
@@ -1859,8 +1826,8 @@ export const LandingPage = () => {
           <div className="md:col-span-2 flex items-center justify-center md:justify-end">
             <button
               onClick={() => {
-                if (typeof window !== 'undefined' && (window as any).__lenis) {
-                  (window as any).__lenis.scrollTo(0, { duration: 1.2 });
+                if (typeof window !== 'undefined' && window.__lenis) {
+                  window.__lenis.scrollTo(0, { duration: 1.2 });
                 } else {
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
@@ -1897,7 +1864,7 @@ export const LandingPage = () => {
                 onClick={() => setInfoModalType(null)}
                 className="hover:text-[#E96C3F] transition-colors cursor-pointer"
               >
-                <X className="w-4 h-4" weight="bold" />
+                <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-6">
@@ -1929,7 +1896,7 @@ export const LandingPage = () => {
                 onClick={() => setActiveOsModal(null)}
                 className="hover:text-[#E96C3F] transition-colors cursor-pointer"
               >
-                <X className="w-4 h-4" weight="bold" />
+                <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-6">
@@ -1952,9 +1919,9 @@ export const LandingPage = () => {
                   title="Copy clone command"
                 >
                   {copiedCloneCmd ? (
-                    <Check className="w-4 h-4 text-[#D9E4CB]" weight="bold" />
+                    <Check className="w-4 h-4 text-[#D9E4CB]" />
                   ) : (
-                    <Copy className="w-4 h-4" weight="bold" />
+                    <Copy className="w-4 h-4" />
                   )}
                 </button>
               </div>
@@ -1987,13 +1954,13 @@ export const LandingPage = () => {
                 onClick={() => setActiveOsModal(null)}
                 className="hover:text-[#E96C3F] transition-colors cursor-pointer"
               >
-                <X className="w-4 h-4" weight="bold" />
+                <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-6">
               {bugSubmitted ? (
                 <div className="text-center py-6">
-                  <CheckCircle className="w-12 h-12 text-[#214C3A] mx-auto mb-3" weight="bold" />
+                  <CheckCircle className="w-12 h-12 text-[#214C3A] mx-auto mb-3" />
                   <h4 className="font-black uppercase text-base text-[#20251F] mb-1">
                     Issue Recorded
                   </h4>
@@ -2077,13 +2044,13 @@ export const LandingPage = () => {
                 onClick={() => setActiveOsModal(null)}
                 className="hover:text-[#E96C3F] transition-colors cursor-pointer"
               >
-                <X className="w-4 h-4" weight="bold" />
+                <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-6">
               {feedbackSubmitted ? (
                 <div className="text-center py-6">
-                  <CheckCircle className="w-12 h-12 text-[#214C3A] mx-auto mb-3" weight="bold" />
+                  <CheckCircle className="w-12 h-12 text-[#214C3A] mx-auto mb-3" />
                   <h4 className="font-black uppercase text-base text-[#20251F] mb-1">
                     Feedback Logged
                   </h4>
@@ -2180,7 +2147,7 @@ export const LandingPage = () => {
         }`}
         aria-label="Back to top"
       >
-        <ArrowUp className="w-4 h-4" weight="bold" />
+        <ArrowUp className="w-4 h-4" />
       </button>
     </main>
   );

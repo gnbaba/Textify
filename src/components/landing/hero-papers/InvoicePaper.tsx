@@ -9,12 +9,16 @@ export const InvoicePaper: React.FC = () => {
       {/* Top Header Grid */}
       <div className="grid grid-cols-2 gap-2 text-[7px] sm:text-[8px] md:text-[9px] border-b border-[#20251F]/40 pb-2">
         <div className="space-y-0.5">
-          <div className="font-bold text-[#20251F] uppercase tracking-wider">CLIENT: ARKHITECTURA LTD.</div>
+          <div className="font-bold text-[#20251F] uppercase tracking-wider">
+            CLIENT: ARKHITECTURA LTD.
+          </div>
           <div className="text-[#20251F]/70">Project: Grin Slase Management</div>
           <div className="text-[#20251F]/70">Project: ProKenn Bumm</div>
         </div>
         <div className="space-y-0.5 text-right">
-          <div className="font-bold text-[#20251F] uppercase tracking-wider">INVOICE NO: INV-2023-0814</div>
+          <div className="font-bold text-[#20251F] uppercase tracking-wider">
+            INVOICE NO: INV-2023-0814
+          </div>
           <div className="text-[#20251F]/70">DATE: 14 OCT 2023</div>
           <div className="text-[#20251F]/70">Current: 805 &bull; ARCH-SPEC</div>
         </div>
@@ -117,7 +121,9 @@ export const InvoicePaper: React.FC = () => {
             <rect x="93" y="0" width="1" height="20" />
             <rect x="96" y="0" width="3" height="20" />
           </svg>
-          <span className="text-[6px] tracking-widest text-[#20251F]/60">8142345678901 20230814001</span>
+          <span className="text-[6px] tracking-widest text-[#20251F]/60">
+            8142345678901 20230814001
+          </span>
         </div>
       </div>
     </div>
