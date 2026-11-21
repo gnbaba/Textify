@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
 import gsap from 'gsap';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { BookExcerptPaper } from './hero-papers/BookExcerptPaper';
+import { IdCardPaper } from './hero-papers/IdCardPaper';
 import { InvoicePaper } from './hero-papers/InvoicePaper';
 import { NotebookPaper } from './hero-papers/NotebookPaper';
 import { ReceiptPaper } from './hero-papers/ReceiptPaper';
-import { BookExcerptPaper } from './hero-papers/BookExcerptPaper';
 import { ShippingLabelPaper } from './hero-papers/ShippingLabelPaper';
-import { IdCardPaper } from './hero-papers/IdCardPaper';
 
 export interface PhysicalPaperConfig {
   id: string;
@@ -93,7 +93,8 @@ const PAPERS_CONFIG: PhysicalPaperConfig[] = [
       id: 'book-sentence',
       fieldCode: '[TX-FIELD #05]',
       label: 'POETRY EXCERPT',
-      textValue: 'Between the quiet margins of the paper floor, every glyph awaits the beam of sight.',
+      textValue:
+        'Between the quiet margins of the paper floor, every glyph awaits the beam of sight.',
       meta: 'CONFIDENCE: 99.7% • DENSE PROSE WASM',
       pinX: 50,
       pinY: 38,
@@ -169,7 +170,9 @@ export interface HeroDraftingCanvasProps {
   isIntroComplete?: boolean;
 }
 
-export const HeroDraftingCanvas: React.FC<HeroDraftingCanvasProps> = ({ isIntroComplete = true }) => {
+export const HeroDraftingCanvas: React.FC<HeroDraftingCanvasProps> = ({
+  isIntroComplete = true,
+}) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const targetPinRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -231,31 +234,34 @@ export const HeroDraftingCanvas: React.FC<HeroDraftingCanvasProps> = ({ isIntroC
   }, []);
 
   // Elastic bounce-back to safe boundaries
-  const bouncePaperToSafety = useCallback((paperId: string, currentX: number, currentY: number) => {
-    const limits = getBoundaryLimits();
-    const targetX = Math.max(limits.minX, Math.min(limits.maxX, currentX));
-    const targetY = Math.max(limits.minY, Math.min(limits.maxY, currentY));
+  const bouncePaperToSafety = useCallback(
+    (paperId: string, currentX: number, currentY: number) => {
+      const limits = getBoundaryLimits();
+      const targetX = Math.max(limits.minX, Math.min(limits.maxX, currentX));
+      const targetY = Math.max(limits.minY, Math.min(limits.maxY, currentY));
 
-    if (currentX !== targetX || currentY !== targetY) {
-      const obj = { x: currentX, y: currentY };
-      gsap.to(obj, {
-        x: targetX,
-        y: targetY,
-        duration: 0.45,
-        ease: 'back.out(1.5)',
-        onUpdate: () => {
-          setPapersState((prev) => ({
-            ...prev,
-            [paperId]: {
-              ...prev[paperId],
-              x: obj.x,
-              y: obj.y,
-            },
-          }));
-        },
-      });
-    }
-  }, [getBoundaryLimits]);
+      if (currentX !== targetX || currentY !== targetY) {
+        const obj = { x: currentX, y: currentY };
+        gsap.to(obj, {
+          x: targetX,
+          y: targetY,
+          duration: 0.45,
+          ease: 'back.out(1.5)',
+          onUpdate: () => {
+            setPapersState((prev) => ({
+              ...prev,
+              [paperId]: {
+                ...prev[paperId],
+                x: obj.x,
+                y: obj.y,
+              },
+            }));
+          },
+        });
+      }
+    },
+    [getBoundaryLimits]
+  );
 
   // Scroll-driven self-arrangement: smoothly glide all papers back to default fan stack & close open tags
   useEffect(() => {
@@ -319,7 +325,10 @@ export const HeroDraftingCanvas: React.FC<HeroDraftingCanvasProps> = ({ isIntroC
   // Handle Dragging an Individual Paper
   const handlePaperPointerDown = (paperId: string, e: React.PointerEvent<HTMLDivElement>) => {
     if (!isIntroComplete) return;
-    if ((e.target as HTMLElement).closest('.ocr-marker') || (e.target as HTMLElement).closest('.ocr-card')) {
+    if (
+      (e.target as HTMLElement).closest('.ocr-marker') ||
+      (e.target as HTMLElement).closest('.ocr-card')
+    ) {
       return;
     }
     e.stopPropagation();
@@ -392,7 +401,10 @@ export const HeroDraftingCanvas: React.FC<HeroDraftingCanvasProps> = ({ isIntroC
   // Handle Canvas Background Click (Draws Marquee Box)
   const handleCanvasPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isIntroComplete) return;
-    if ((e.target as HTMLElement).closest('.paper-item') || (e.target as HTMLElement).closest('.ocr-card')) {
+    if (
+      (e.target as HTMLElement).closest('.paper-item') ||
+      (e.target as HTMLElement).closest('.ocr-card')
+    ) {
       return;
     }
     if (!canvasRef.current) return;
@@ -566,7 +578,9 @@ export const HeroDraftingCanvas: React.FC<HeroDraftingCanvasProps> = ({ isIntroC
                       >
                         <span
                           className={`w-1 h-1 rounded-full transition-colors ${
-                            activeCardIds[cfg.ocrTarget.id] ? 'bg-[#E96C3F]' : 'bg-[#20251F]/50 group-hover:bg-[#E96C3F]'
+                            activeCardIds[cfg.ocrTarget.id]
+                              ? 'bg-[#E96C3F]'
+                              : 'bg-[#20251F]/50 group-hover:bg-[#E96C3F]'
                           }`}
                         />
                       </div>
@@ -582,7 +596,9 @@ export const HeroDraftingCanvas: React.FC<HeroDraftingCanvasProps> = ({ isIntroC
                         } w-56 sm:w-64 bg-[#E96C3F] text-[#FFFDF7] p-2.5 shadow-drafting-sm border border-[#20251F] font-mono-industrial text-left animate-in fade-in zoom-in-95 duration-150 z-40`}
                       >
                         <div className="flex items-center justify-between pb-1 border-b border-[#FFFDF7]/25 text-[8px] font-bold tracking-[0.14em] uppercase text-[#FFFDF7]/85">
-                          <span>{cfg.ocrTarget.fieldCode} {cfg.ocrTarget.label}</span>
+                          <span>
+                            {cfg.ocrTarget.fieldCode} {cfg.ocrTarget.label}
+                          </span>
                           <button
                             type="button"
                             onClick={(e) => toggleCard(cfg.ocrTarget!.id, e)}
@@ -631,11 +647,13 @@ export const HeroDraftingCanvas: React.FC<HeroDraftingCanvasProps> = ({ isIntroC
             top: Math.min(dragStart.y, dragCurrent.y),
             width: Math.abs(dragCurrent.x - dragStart.x),
             height: Math.abs(dragCurrent.y - dragStart.y),
-            background: 'radial-gradient(circle at center, rgba(233,108,63,0.18) 0%, rgba(233,108,63,0.06) 100%)',
+            background:
+              'radial-gradient(circle at center, rgba(233,108,63,0.18) 0%, rgba(233,108,63,0.06) 100%)',
           }}
         >
           <span className="absolute bottom-1 right-1 font-mono-industrial text-[8px] font-bold text-[#E96C3F] bg-[#F3EFE3] px-1 border border-[#E96C3F]/40 select-none">
-            X: {Math.abs(dragCurrent.x - dragStart.x)}PX Y: {Math.abs(dragCurrent.y - dragStart.y)}PX
+            X: {Math.abs(dragCurrent.x - dragStart.x)}PX Y: {Math.abs(dragCurrent.y - dragStart.y)}
+            PX
           </span>
         </div>
       )}
@@ -643,7 +661,9 @@ export const HeroDraftingCanvas: React.FC<HeroDraftingCanvasProps> = ({ isIntroC
       {/* Bottom HUD: Coordinates & Dynamic Industrial Hint (Zero Buttons!) */}
       <div className="canvas-hud absolute bottom-2.5 left-4 sm:left-6 right-4 sm:right-6 z-10 flex items-center justify-between font-mono-industrial text-[8px] md:text-[9px] font-bold tracking-[0.1em] text-[#20251F]/50 uppercase select-none pointer-events-none">
         <div className="flex items-center gap-3">
-          <span>X: {hudCoords.x}PX &bull; Y: {hudCoords.y}PX</span>
+          <span>
+            X: {hudCoords.x}PX &bull; Y: {hudCoords.y}PX
+          </span>
           <span className="hidden md:inline text-[#20251F]/30">|</span>
           <span className="hidden md:inline text-[#20251F]/40">
             DRAG ANY PAPER TO REPOSITION &bull; DRAG CANVAS TO SCAN

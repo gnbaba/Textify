@@ -1,7 +1,6 @@
-import { createWorker, Worker, PSM } from 'tesseract.js';
-import type { IOcrService, ExtractionMode, OcrOptions } from '../types/ocrTypes';
-import { loadOpenCv } from './opencvLoader';
-import { OpenCVPreprocessorService } from './opencvPreprocessorService';
+import { createWorker, PSM, Worker } from 'tesseract.js';
+import type { ExtractionMode, IOcrService, OcrOptions } from '../types/ocrTypes';
+import { preprocessCanvasImage } from './canvasPreprocessorService';
 
 class TesseractOcrService implements IOcrService {
   private static instance: TesseractOcrService;
@@ -51,7 +50,7 @@ class TesseractOcrService implements IOcrService {
         corePath: '/ocr-assets',
         langPath: '/ocr-assets',
       });
-      
+
       this.worker = worker;
       return worker;
     } catch (error) {
@@ -61,68 +60,6 @@ class TesseractOcrService implements IOcrService {
     }
   }
 
-  private preprocessImage(file: File, options?: OcrOptions, useOpenCv: boolean = false): Promise<HTMLCanvasElement> {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      const objectUrl = URL.createObjectURL(file);
-
-      img.onload = () => {
-        URL.revokeObjectURL(objectUrl);
-    
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-    
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          reject(new Error('Failed to get 2D context for canvas'));
-          return;
-        }
-
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        if (useOpenCv) {
-          // Draw raw image first, then process via OpenCV WASM
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          OpenCVPreprocessorService.preprocess(canvas, options);
-        } else {
-          // Fallback to standard Canvas CSS Filter
-          if ('filter' in ctx) {
-            try {
-              let filterVal = 'none';
-              const preset = options?.preset || 'document';
-
-              if (preset === 'document') {
-                const b = options?.brightness !== undefined ? options.brightness : 80;
-                const c = options?.contrast !== undefined ? options.contrast : 200;
-                filterVal = `grayscale(100%) brightness(${b}%) contrast(${c}%)`;
-              } else if (preset === 'invert') {
-                const b = options?.brightness !== undefined ? options.brightness : 100;
-                const c = options?.contrast !== undefined ? options.contrast : 200;
-                filterVal = `grayscale(100%) invert(100%) brightness(${b}%) contrast(${c}%)`;
-              }
-
-              ctx.filter = filterVal;
-            } catch (e) {
-              console.warn('Canvas filter gracefully skipped:', e);
-            }
-          }
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        }
-    
-        resolve(canvas);
-      };
-
-      img.onerror = () => {
-        URL.revokeObjectURL(objectUrl);
-        reject(new Error('Failed to load image for preprocessing'));
-      };
-
-      img.src = objectUrl;
-    });
-  }
-
   public async extractText(
     file: File,
     mode: ExtractionMode,
@@ -130,21 +67,25 @@ class TesseractOcrService implements IOcrService {
     onProgress?: (progress: number) => void
   ): Promise<{ text: string; confidence?: number }> {
     this.currentOnProgress = onProgress;
-    
+
     try {
+      if (options?.isStale?.()) {
+        return { text: '' };
+      }
+
       const lang = options?.language || 'eng';
       const worker = await this.getWorker(lang);
 
-      let useOpenCv = false;
-      try {
-        await loadOpenCv();
-        useOpenCv = true;
-      } catch (err) {
-        console.warn('OpenCV loading failed, falling back to Canvas filter preprocessing:', err);
+      if (options?.isStale?.()) {
+        return { text: '' };
       }
 
-      const canvas = await this.preprocessImage(file, options, useOpenCv);
-      
+      const canvas = await preprocessCanvasImage(file);
+
+      if (options?.isStale?.()) {
+        return { text: '' };
+      }
+
       let pagesegMode = mode === 'graphic' ? PSM.SINGLE_BLOCK : PSM.AUTO;
       if (options?.psm) {
         switch (options.psm) {
@@ -167,16 +108,66 @@ class TesseractOcrService implements IOcrService {
 
       await worker.setParameters({
         tessedit_pageseg_mode: pagesegMode,
-        user_defined_dpi: '300', 
+        user_defined_dpi: '300',
       });
 
       const { data } = await worker.recognize(canvas);
-      
+      let bestText = data.text || '';
+      let bestConfidence = data.confidence;
+
+      if (options?.isStale?.()) {
+        return { text: '' };
+      }
+
+      // Alternate page segmentation fallback for sparse or empty auto-results on large images
+      const nonWhitespaceLength = bestText.trim().replace(/\s+/g, '').length;
+      const isSparse = nonWhitespaceLength < 15;
+      const isLargeImage = canvas.width > 300 && canvas.height > 300;
+
+      if (
+        mode === 'document' &&
+        pagesegMode === PSM.AUTO &&
+        isLargeImage &&
+        isSparse &&
+        !options?.isStale?.()
+      ) {
+        await worker.setParameters({
+          tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
+          user_defined_dpi: '300',
+        });
+
+        const pass2Result = await worker.recognize(canvas);
+        if (!options?.isStale?.()) {
+          const pass2Text = pass2Result.data.text || '';
+          const pass2NonWhitespaceLength = pass2Text.trim().replace(/\s+/g, '').length;
+
+          // Select candidate by text completeness rather than confidence alone
+          if (pass2NonWhitespaceLength > nonWhitespaceLength) {
+            bestText = pass2Text;
+            bestConfidence = pass2Result.data.confidence;
+          }
+        }
+      }
+
+      if (options?.isStale?.()) {
+        return { text: '' };
+      }
+
+      if (bestText.trim().length === 0) {
+        throw new Error('No readable text detected in selected region.');
+      }
+
       return {
-        text: data.text || '',
-        confidence: data.confidence,
+        text: bestText,
+        confidence: bestConfidence,
       };
     } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === 'No readable text detected in selected region.'
+      ) {
+        throw error;
+      }
       console.error('OCR Extraction Error:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`OCR processing failed: ${errorMessage}`);

@@ -1,47 +1,33 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { PipelineWorkflowSection } from '../components/landing/PipelineWorkflowSection';
-import { HeroDraftingCanvas } from '../components/landing/HeroDraftingCanvas';
-import { TriangleFlipBackground } from '../components/landing/TriangleFlipBackground';
-import Lenis from 'lenis';
-import {
-  Sparkle,
-  ListBullets,
-  Copy,
-  Check,
-  Lightning,
-  ArrowRight,
-  ArrowUpRight,
-  LockKey,
-  CheckCircle,
-  ArrowUp,
-  X,
-  List,
-  CursorClick,
-  Code,
-  Bug,
-  Chats,
-  GithubLogo,
-  BookOpen,
-  ShieldCheck,
-  Cpu,
-  BoundingBox,
-  FileText,
-  Terminal,
-  Crosshair,
-  Plus,
-  Minus,
-  CaretDown,
-  ArrowsOut,
-  Sliders,
-  Receipt,
-  Scales,
-  Compass,
-  IdentificationCard,
-} from '@phosphor-icons/react';
+import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { useGSAP } from '@gsap/react';
+import Lenis from 'lenis';
+import {
+  ArrowRight,
+  ArrowUp,
+  ArrowUpRight,
+  BookOpen,
+  Box,
+  Bug,
+  Check,
+  CheckCircle,
+  Code,
+  Copy,
+  Cpu,
+  FileText,
+  GitBranch,
+  Lock,
+  Menu,
+  MessageSquare,
+  ShieldCheck,
+  X,
+  Zap,
+} from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { HeroDraftingCanvas } from '../components/landing/HeroDraftingCanvas';
+import { PipelineWorkflowSection } from '../components/landing/PipelineWorkflowSection';
+import { TriangleFlipBackground } from '../components/landing/TriangleFlipBackground';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -67,7 +53,7 @@ const PRICING_TIERS = [
   },
   {
     title: 'Authenticated Vault',
-    subtitle: 'Google OAuth • Encrypted Firestore Ledger',
+    subtitle: 'Google OAuth • Private Cloud Storage',
     price: '$0.00',
     billing: 'OPEN SOURCE COMMUNITY',
     badge: 'RECOMMENDED',
@@ -75,7 +61,7 @@ const PRICING_TIERS = [
     ref: 'TIER_02 • SYNCED_WORKSPACE',
     features: [
       'Infinite Daily High-Resolution Scans',
-      'End-to-End Encrypted Cloud Firestore History',
+      'Private Account-Isolated Cloud Storage',
       'Permanent Session Workspace (Pinning & Renaming)',
       'Multi-Format File Downloads & Table Splitting',
       'Community Pull Request & API Roadmap Access',
@@ -87,7 +73,7 @@ const PRICING_TIERS = [
 const LEGAL_CONTENT = {
   privacy: {
     title: 'Privacy Policy',
-    body: "Textify is built with privacy at its core. When you scan an image, the Optical Character Recognition (OCR) process happens entirely locally inside your browser. We never upload, save, or view your original images. If you choose to log in, your extracted text is securely encrypted and stored in your private Cloud Firestore database, accessible only by you.",
+    body: 'Textify is built with privacy at its core. When you scan an image, the Optical Character Recognition (OCR) process happens entirely locally inside your browser by default. We never upload or save your original images unless you explicitly opt in to Gemini Cloud AI enhancement. If you choose to log in, your extracted text is stored in your private account-isolated Cloud Firestore database, encrypted in transit and at rest, accessible only by you.',
   },
   terms: {
     title: 'Terms of Service',
@@ -100,12 +86,12 @@ const LEGAL_CONTENT = {
 };
 
 const MARQUEE_ITEMS = [
-  { label: 'ZERO SERVER UPLOADS', icon: ShieldCheck, color: 'text-[#E96C3F]' },
-  { label: '100% LOCAL PROCESSING', icon: Cpu, color: 'text-[#214C3A]' },
-  { label: 'OPENCV DESKEW', icon: BoundingBox, color: 'text-[#E96C3F]' },
+  { label: 'LOCAL-FIRST PRIVACY', icon: ShieldCheck, color: 'text-[#E96C3F]' },
+  { label: 'OPTIONAL CLOUD AI', icon: Cpu, color: 'text-[#214C3A]' },
+  { label: 'CANVAS PREPROCESS', icon: Box, color: 'text-[#E96C3F]' },
   { label: 'SELECTIVE PDF EXPORT', icon: FileText, color: 'text-[#214C3A]' },
-  { label: 'TESSERACT WASM', icon: Lightning, color: 'text-[#E96C3F]' },
-  { label: 'PRIVACY BY DEFAULT', icon: LockKey, color: 'text-[#214C3A]' },
+  { label: 'TESSERACT WASM', icon: Zap, color: 'text-[#E96C3F]' },
+  { label: 'PRIVACY BY DEFAULT', icon: Lock, color: 'text-[#214C3A]' },
 ];
 
 // -- Component --
@@ -150,8 +136,8 @@ export const LandingPage = () => {
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
     });
-    (window as any).__lenis = lenis;
-    (window as any).__ScrollTrigger = ScrollTrigger;
+    window.__lenis = lenis;
+    window.__ScrollTrigger = ScrollTrigger;
 
     // Lock smooth wheel/touch scrolling until intro animation completes
     if (!isIntroCompleteRef.current) {
@@ -165,33 +151,36 @@ export const LandingPage = () => {
     gsap.ticker.add(tickerCallback);
     gsap.ticker.lagSmoothing(0);
 
-    const handleScroll = (e?: any) => {
-      const currentScrollY = typeof e?.scroll === 'number' ? e.scroll : window.scrollY;
-      setShowTopBtn(currentScrollY > 400);
+    const handleScroll = (e?: { scroll?: number; direction?: number } | Event) => {
+      const scrollVal =
+        e && 'scroll' in e && typeof e.scroll === 'number' ? e.scroll : window.scrollY;
+      const dirVal = e && 'direction' in e ? e.direction : undefined;
+      setShowTopBtn(scrollVal > 400);
 
       // Smooth architectural header hide when scrolling down past hero, reveal on scroll up
-      if (currentScrollY <= 220) {
+      if (scrollVal <= 220) {
         setIsHeaderVisible(true);
-      } else if (e?.direction === 1) {
+      } else if (dirVal === 1) {
         setIsHeaderVisible(false);
-      } else if (e?.direction === -1) {
+      } else if (dirVal === -1) {
         setIsHeaderVisible(true);
       } else {
-        const diff = currentScrollY - lastScrollYRef.current;
+        const diff = scrollVal - lastScrollYRef.current;
         if (diff > 4) {
           setIsHeaderVisible(false);
         } else if (diff < -4) {
           setIsHeaderVisible(true);
         }
       }
-      lastScrollYRef.current = currentScrollY;
+      lastScrollYRef.current = scrollVal;
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    const handleWindowScroll = (e: Event) => handleScroll(e);
+    window.addEventListener('scroll', handleWindowScroll, { passive: true });
     lenis.on('scroll', handleScroll);
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', handleWindowScroll);
       lenis.off('scroll', handleScroll);
       gsap.ticker.remove(tickerCallback);
       lenis.destroy();
@@ -233,8 +222,8 @@ export const LandingPage = () => {
       }
       window.scrollTo(0, 0);
 
-      if (typeof window !== 'undefined' && (window as any).__lenis) {
-        (window as any).__lenis.stop();
+      if (typeof window !== 'undefined' && window.__lenis) {
+        window.__lenis.stop();
       }
       document.documentElement.style.overflow = 'hidden';
       document.body.style.overflow = 'hidden';
@@ -274,14 +263,20 @@ export const LandingPage = () => {
 
       // 3. Hardware-composited initial states (Drawn Line pen physics)
       // Horizontal lines start at scaleX: 0
-      if (headerBottomLine) gsap.set(headerBottomLine, { scaleX: 0, transformOrigin: 'left center' });
-      if (projLinesH && projLinesH.length > 0) gsap.set(projLinesH, { scaleX: 0, transformOrigin: 'left center' });
-      if (panelLinesH && panelLinesH.length > 0) gsap.set(panelLinesH, { scaleX: 0, transformOrigin: 'left center' });
+      if (headerBottomLine)
+        gsap.set(headerBottomLine, { scaleX: 0, transformOrigin: 'left center' });
+      if (projLinesH && projLinesH.length > 0)
+        gsap.set(projLinesH, { scaleX: 0, transformOrigin: 'left center' });
+      if (panelLinesH && panelLinesH.length > 0)
+        gsap.set(panelLinesH, { scaleX: 0, transformOrigin: 'left center' });
 
       // Vertical lines start at scaleY: 0
-      if (headerNavDividers && headerNavDividers.length > 0) gsap.set(headerNavDividers, { scaleY: 0, transformOrigin: 'center top' });
-      if (projLinesV && projLinesV.length > 0) gsap.set(projLinesV, { scaleY: 0, transformOrigin: 'center top' });
-      if (panelLineV && panelLineV.length > 0) gsap.set(panelLineV, { scaleY: 0, transformOrigin: 'center top' });
+      if (headerNavDividers && headerNavDividers.length > 0)
+        gsap.set(headerNavDividers, { scaleY: 0, transformOrigin: 'center top' });
+      if (projLinesV && projLinesV.length > 0)
+        gsap.set(projLinesV, { scaleY: 0, transformOrigin: 'center top' });
+      if (panelLineV && panelLineV.length > 0)
+        gsap.set(panelLineV, { scaleY: 0, transformOrigin: 'center top' });
 
       // Brand Logo initial states: eye is resting, word is tucked behind
       if (headerEye) gsap.set(headerEye, { scaleY: 1 });
@@ -311,8 +306,8 @@ export const LandingPage = () => {
           }
 
           // Unlock scrolling & restore normal interaction
-          if (typeof window !== 'undefined' && (window as any).__lenis) {
-            (window as any).__lenis.start();
+          if (typeof window !== 'undefined' && window.__lenis) {
+            window.__lenis.start();
           }
           document.documentElement.style.overflow = '';
           document.body.style.overflow = '';
@@ -330,13 +325,25 @@ export const LandingPage = () => {
         introTl.to(headerBottomLine, { scaleX: 1, duration: 0.85, ease: 'power2.inOut' }, 0.05);
       }
       if (headerNavDividers && headerNavDividers.length > 0) {
-        introTl.to(headerNavDividers, { scaleY: 1, duration: 0.65, stagger: 0.08, ease: 'power2.inOut' }, 0.2);
+        introTl.to(
+          headerNavDividers,
+          { scaleY: 1, duration: 0.65, stagger: 0.08, ease: 'power2.inOut' },
+          0.2
+        );
       }
       if (projLinesH && projLinesH.length > 0) {
-        introTl.to(projLinesH, { scaleX: 1, duration: 0.9, stagger: 0.1, ease: 'power2.inOut' }, 0.1);
+        introTl.to(
+          projLinesH,
+          { scaleX: 1, duration: 0.9, stagger: 0.1, ease: 'power2.inOut' },
+          0.1
+        );
       }
       if (projLinesV && projLinesV.length > 0) {
-        introTl.to(projLinesV, { scaleY: 1, duration: 0.75, stagger: 0.08, ease: 'power2.inOut' }, 0.25);
+        introTl.to(
+          projLinesV,
+          { scaleY: 1, duration: 0.75, stagger: 0.08, ease: 'power2.inOut' },
+          0.25
+        );
       }
       if (panelLinesH && panelLinesH.length > 0) {
         introTl.to(panelLinesH, { scaleX: 1, duration: 0.85, ease: 'power2.inOut' }, 0.15);
@@ -359,11 +366,7 @@ export const LandingPage = () => {
       }
       if (headerWord) {
         // "TEXTIFY" typography emerges smoothly from behind the eye
-        introTl.to(
-          headerWord,
-          { opacity: 1, x: 0, duration: 0.55, ease: 'power2.out' },
-          1.18
-        );
+        introTl.to(headerWord, { opacity: 1, x: 0, duration: 0.55, ease: 'power2.out' }, 1.18);
       }
 
       // Phase 3: Sequential Paper Drop (Zero Premature Shadows!) (1.65s - 2.85s)
@@ -387,32 +390,20 @@ export const LandingPage = () => {
 
       // Phase 4: Words Below in Slow Motion + Moving Belt (2.75s - 3.65s)
       if (headline) {
-        introTl.to(
-          headline,
-          { opacity: 1, y: 0, duration: 0.85, ease: 'power2.out' },
-          2.75
-        );
+        introTl.to(headline, { opacity: 1, y: 0, duration: 0.85, ease: 'power2.out' }, 2.75);
       }
       if (paragraph) {
-        introTl.to(
-          paragraph,
-          { opacity: 1, y: 0, duration: 0.75, ease: 'power2.out' },
-          2.95
-        );
+        introTl.to(paragraph, { opacity: 1, y: 0, duration: 0.75, ease: 'power2.out' }, 2.95);
       }
       if (belt) {
-        introTl.to(
-          belt,
-          { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' },
-          3.15
-        );
+        introTl.to(belt, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, 3.15);
       }
 
       return () => {
         introTl.kill();
         isIntroCompleteRef.current = true;
-        if (typeof window !== 'undefined' && (window as any).__lenis) {
-          (window as any).__lenis.start();
+        if (typeof window !== 'undefined' && window.__lenis) {
+          window.__lenis.start();
         }
         document.documentElement.style.overflow = '';
         document.body.style.overflow = '';
@@ -491,7 +482,7 @@ export const LandingPage = () => {
         );
       }
     },
-    { scope: featuresRef },
+    { scope: featuresRef }
   );
 
   // GSAP — Pricing cards tilt-in reveal
@@ -559,7 +550,7 @@ export const LandingPage = () => {
         }
       );
     },
-    { scope: pricingRef },
+    { scope: pricingRef }
   );
 
   // GSAP — Open Source Section animations
@@ -580,12 +571,31 @@ export const LandingPage = () => {
         },
       });
 
-      tl.fromTo(header, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' })
-        .fromTo(desc, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' }, '-=0.3')
-        .fromTo(btns, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, ease: 'back.out(1.5)' }, '-=0.2')
-        .fromTo(cards, { opacity: 0, y: 35 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.15, ease: 'power2.out' }, '-=0.2');
+      tl.fromTo(
+        header,
+        { opacity: 0, y: 30 },
+        { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }
+      )
+        .fromTo(
+          desc,
+          { opacity: 0, y: 20 },
+          { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' },
+          '-=0.3'
+        )
+        .fromTo(
+          btns,
+          { opacity: 0, y: 20 },
+          { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, ease: 'back.out(1.5)' },
+          '-=0.2'
+        )
+        .fromTo(
+          cards,
+          { opacity: 0, y: 35 },
+          { opacity: 1, y: 0, duration: 0.6, stagger: 0.15, ease: 'power2.out' },
+          '-=0.2'
+        );
     },
-    { scope: openSourceRef },
+    { scope: openSourceRef }
   );
 
   // GSAP — CTA banner parallax + pulse
@@ -637,7 +647,7 @@ export const LandingPage = () => {
         }
       );
     },
-    { scope: ctaBannerRef },
+    { scope: ctaBannerRef }
   );
 
   return (
@@ -766,7 +776,7 @@ export const LandingPage = () => {
               aria-label="Toggle menu"
             >
               <div className="header-nav-divider absolute top-0 bottom-0 left-0 border-l border-[#20251F]/20 origin-top pointer-events-none z-30 md:hidden" />
-              {mobileMenuOpen ? <X className="w-5 h-5" weight="bold" /> : <List className="w-5 h-5" weight="bold" />}
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </nav>
@@ -789,7 +799,9 @@ export const LandingPage = () => {
                 <span className="relative z-20 transition-colors duration-400 ease-out group-hover:text-[#F3EFE3]">
                   [ {item.label} ]
                 </span>
-                <span className="relative z-20 text-[8px] font-mono opacity-40 group-hover:text-[#F3EFE3]">⌟</span>
+                <span className="relative z-20 text-[8px] font-mono opacity-40 group-hover:text-[#F3EFE3]">
+                  ⌟
+                </span>
               </a>
             ))}
             <Link
@@ -801,7 +813,9 @@ export const LandingPage = () => {
               <span className="relative z-20 transition-colors duration-400 ease-out group-hover:text-[#F3EFE3]">
                 [ DOCS ]
               </span>
-              <span className="relative z-20 text-[8px] font-mono opacity-40 group-hover:text-[#F3EFE3]">⌟</span>
+              <span className="relative z-20 text-[8px] font-mono opacity-40 group-hover:text-[#F3EFE3]">
+                ⌟
+              </span>
             </Link>
             <Link
               to="/app"
@@ -820,7 +834,10 @@ export const LandingPage = () => {
       {/* ═══════════════════════════════════════════════════════
           HERO — Architectural Drafting Canvas & Document Elevation
           ═══════════════════════════════════════════════════════ */}
-      <section ref={heroRef} className="relative pt-14 border-b border-[#20251F]/20 bg-[#F3EFE3] overflow-hidden min-h-[100dvh] lg:h-[100dvh] flex flex-col justify-between">
+      <section
+        ref={heroRef}
+        className="relative pt-14 border-b border-[#20251F]/20 bg-[#F3EFE3] overflow-hidden min-h-[100dvh] lg:h-[100dvh] flex flex-col justify-between"
+      >
         {/* Main Central Drafting Canvas Area (Modularized Playground) */}
         <HeroDraftingCanvas isIntroComplete={isIntroComplete} />
 
@@ -836,8 +853,13 @@ export const LandingPage = () => {
 
             {/* Headline Cell */}
             <div className="hero-split-cell md:col-span-6 lg:col-span-7 p-4 sm:p-5 md:p-6 lg:p-7 flex items-center">
-              <h1 ref={heroHeadlineRef} className="text-2xl sm:text-3xl md:text-[2rem] lg:text-[2.45rem] xl:text-[2.85rem] font-black uppercase tracking-[-0.03em] leading-[0.95] text-[#20251F]">
-                AN AI OCR ENGINE THAT WORKS<br />INSIDE YOUR BROWSER
+              <h1
+                ref={heroHeadlineRef}
+                className="text-2xl sm:text-3xl md:text-[2rem] lg:text-[2.45rem] xl:text-[2.85rem] font-black uppercase tracking-[-0.03em] leading-[0.95] text-[#20251F]"
+              >
+                AN AI OCR ENGINE THAT WORKS
+                <br />
+                INSIDE YOUR BROWSER
               </h1>
             </div>
 
@@ -847,32 +869,46 @@ export const LandingPage = () => {
               <div className="hero-panel-line-h absolute bottom-[44px] left-0 right-0 border-t border-[#20251F]/20 origin-left pointer-events-none z-20" />
               {/* Editorial Paragraph Cell */}
               <div className="p-4 sm:p-5 md:p-6 lg:p-7 flex items-center">
-                <p ref={heroParagraphRef} className="font-mono-industrial text-[10.5px] md:text-[11.5px] font-semibold tracking-[0.02em] leading-[1.6] uppercase text-[#20251F]/70">
-                  Textify executes WebAssembly Tesseract and OpenCV directly in client memory. Extract, deskew, and organize document text with zero server uploads and complete privacy.
+                <p
+                  ref={heroParagraphRef}
+                  className="font-mono-industrial text-[10.5px] md:text-[11.5px] font-semibold tracking-[0.02em] leading-[1.6] uppercase text-[#20251F]/70"
+                >
+                  Textify executes WebAssembly Tesseract directly in client memory. Extract and
+                  organize document text locally, with optional cloud AI enhancement.
                 </p>
               </div>
 
               {/* Integrated Specification Ticker Tape — Architectural Glide */}
-              <div ref={heroBeltRef} className="w-full bg-transparent py-2.5 overflow-hidden select-none flex relative [mask-image:linear-gradient(to_right,transparent,black_16px,black_calc(100%-16px),transparent)]">
+              <div
+                ref={heroBeltRef}
+                className="w-full bg-transparent py-2.5 overflow-hidden select-none flex relative [mask-image:linear-gradient(to_right,transparent,black_16px,black_calc(100%-16px),transparent)]"
+              >
                 <div className="animate-infinite-marquee-slow flex items-center shrink-0">
                   {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, idx) => (
                     <div key={`m1-${idx}`} className="flex items-center gap-2 px-3.5">
-                      <item.icon className={`w-3.5 h-3.5 ${item.color} shrink-0`} weight="bold" />
+                      <item.icon className={`w-3.5 h-3.5 ${item.color} shrink-0`} />
                       <span className="font-mono-industrial text-[9px] font-bold tracking-[0.2em] text-[#20251F] whitespace-nowrap">
                         {item.label}
                       </span>
-                      <span className="text-[#E96C3F] font-mono text-[9px] select-none ml-2.5 opacity-70">✦</span>
+                      <span className="text-[#E96C3F] font-mono text-[9px] select-none ml-2.5 opacity-70">
+                        ✦
+                      </span>
                     </div>
                   ))}
                 </div>
-                <div className="animate-infinite-marquee-slow flex items-center shrink-0" aria-hidden="true">
+                <div
+                  className="animate-infinite-marquee-slow flex items-center shrink-0"
+                  aria-hidden="true"
+                >
                   {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, idx) => (
                     <div key={`m2-${idx}`} className="flex items-center gap-2 px-3.5">
-                      <item.icon className={`w-3.5 h-3.5 ${item.color} shrink-0`} weight="bold" />
+                      <item.icon className={`w-3.5 h-3.5 ${item.color} shrink-0`} />
                       <span className="font-mono-industrial text-[9px] font-bold tracking-[0.2em] text-[#20251F] whitespace-nowrap">
                         {item.label}
                       </span>
-                      <span className="text-[#E96C3F] font-mono text-[9px] select-none ml-2.5 opacity-70">✦</span>
+                      <span className="text-[#E96C3F] font-mono text-[9px] select-none ml-2.5 opacity-70">
+                        ✦
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -885,7 +921,11 @@ export const LandingPage = () => {
       {/* ═══════════════════════════════════════════════════════
           PHASE 4: 4-COLUMN ISOMETRIC FRICTION GRID
           ═══════════════════════════════════════════════════════ */}
-      <section ref={featuresRef} id="features" className="w-full border-b border-[#20251F]/20 bg-[#F3EFE3] relative z-10 min-h-screen flex flex-col justify-between">
+      <section
+        ref={featuresRef}
+        id="features"
+        className="w-full border-b border-[#20251F]/20 bg-[#F3EFE3] relative z-10 min-h-screen flex flex-col justify-between"
+      >
         <div className="max-w-[1440px] w-full mx-auto flex-1 flex flex-col justify-between">
           {/* Section Headline Split Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-[#20251F]/20 px-6 sm:px-8 py-10 md:py-14 border-b border-[#20251F]/20">
@@ -899,7 +939,9 @@ export const LandingPage = () => {
             </div>
             <div className="features-editorial lg:col-span-5 pt-6 lg:pt-0 lg:pl-8 flex items-center">
               <p className="text-[14px] sm:text-[15px] font-normal leading-[1.65] text-[#20251F]/80">
-                Traditional OCR is rigid and passive. It scrambles smartphone camera angles, transmits confidential documents to remote cloud servers, and dumps flat unstructured strings that destroy your formatting.
+                Traditional OCR is rigid and passive. It scrambles smartphone camera angles,
+                transmits confidential documents to remote cloud servers, and dumps flat
+                unstructured strings that destroy your formatting.
               </p>
             </div>
           </div>
@@ -917,15 +959,64 @@ export const LandingPage = () => {
                 {/* Minimalist Isometric Wireframe 01: Perspective Skew & Alignment */}
                 <div className="my-8 lg:my-10 h-52 lg:h-64 flex items-center justify-center relative overflow-hidden wireframe-art">
                   <div className="absolute inset-0 drafting-grid-hover pointer-events-none" />
-                  <svg width="100%" height="100%" viewBox="0 0 200 170" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#20251F] relative z-10">
+                  <svg
+                    width="100%"
+                    height="100%"
+                    viewBox="0 0 200 170"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="text-[#20251F] relative z-10"
+                  >
                     {/* Base Orthogonal Coordinate Grid (Floor) */}
-                    <path d="M25 130 L100 100 L175 130 L100 160 Z" stroke="currentColor" strokeOpacity="0.2" strokeWidth="1" strokeDasharray="3 3" />
-                    <line x1="25" y1="130" x2="175" y2="130" stroke="currentColor" strokeOpacity="0.15" strokeWidth="1" strokeDasharray="2 4" />
-                    
+                    <path
+                      d="M25 130 L100 100 L175 130 L100 160 Z"
+                      stroke="currentColor"
+                      strokeOpacity="0.2"
+                      strokeWidth="1"
+                      strokeDasharray="3 3"
+                    />
+                    <line
+                      x1="25"
+                      y1="130"
+                      x2="175"
+                      y2="130"
+                      stroke="currentColor"
+                      strokeOpacity="0.15"
+                      strokeWidth="1"
+                      strokeDasharray="2 4"
+                    />
+
                     {/* Dropping Corner Projection Chords */}
-                    <line x1="38" y1="68" x2="38" y2="125" stroke="#20251F" strokeOpacity="0.25" strokeWidth="1" className="wireframe-dash" />
-                    <line x1="162" y1="52" x2="162" y2="125" stroke="#20251F" strokeOpacity="0.25" strokeWidth="1" className="wireframe-dash" />
-                    <line x1="100" y1="18" x2="100" y2="100" stroke="#20251F" strokeOpacity="0.25" strokeWidth="1" className="wireframe-dash" />
+                    <line
+                      x1="38"
+                      y1="68"
+                      x2="38"
+                      y2="125"
+                      stroke="#20251F"
+                      strokeOpacity="0.25"
+                      strokeWidth="1"
+                      className="wireframe-dash"
+                    />
+                    <line
+                      x1="162"
+                      y1="52"
+                      x2="162"
+                      y2="125"
+                      stroke="#20251F"
+                      strokeOpacity="0.25"
+                      strokeWidth="1"
+                      className="wireframe-dash"
+                    />
+                    <line
+                      x1="100"
+                      y1="18"
+                      x2="100"
+                      y2="100"
+                      stroke="#20251F"
+                      strokeOpacity="0.25"
+                      strokeWidth="1"
+                      className="wireframe-dash"
+                    />
 
                     {/* Tilted Isometric Plane (Reacts to Hover with Rotation Leveling) */}
                     <g className="wireframe-angle-rotate">
@@ -938,12 +1029,41 @@ export const LandingPage = () => {
                         className="wireframe-draw-stroke"
                       />
                       {/* Internal Text Lines on Document */}
-                      <line x1="60" y1="62" x2="120" y2="38" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.6" />
-                      <line x1="65" y1="74" x2="135" y2="46" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.6" />
-                      <line x1="70" y1="86" x2="115" y2="68" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.6" />
-                      
+                      <line
+                        x1="60"
+                        y1="62"
+                        x2="120"
+                        y2="38"
+                        stroke="currentColor"
+                        strokeWidth="1.2"
+                        strokeOpacity="0.6"
+                      />
+                      <line
+                        x1="65"
+                        y1="74"
+                        x2="135"
+                        y2="46"
+                        stroke="currentColor"
+                        strokeWidth="1.2"
+                        strokeOpacity="0.6"
+                      />
+                      <line
+                        x1="70"
+                        y1="86"
+                        x2="115"
+                        y2="68"
+                        stroke="currentColor"
+                        strokeWidth="1.2"
+                        strokeOpacity="0.6"
+                      />
+
                       {/* Angle Pitch Arc Indicator */}
-                      <path d="M135 110 A35 35 0 0 0 160 88" stroke="#E96C3F" strokeWidth="1.5" strokeDasharray="2 2" />
+                      <path
+                        d="M135 110 A35 35 0 0 0 160 88"
+                        stroke="#E96C3F"
+                        strokeWidth="1.5"
+                        strokeDasharray="2 2"
+                      />
                       <circle cx="162" cy="52" r="3" fill="#E96C3F" className="animate-pulse" />
                     </g>
                   </svg>
@@ -952,10 +1072,13 @@ export const LandingPage = () => {
 
               <div className="pt-4 border-t border-dashed border-[#20251F]/15">
                 <h3 className="text-xl sm:text-2xl lg:text-[1.65rem] font-black uppercase tracking-tight leading-[1.08] text-[#20251F] mb-3.5">
-                  Every Angle<br />Scrambles Text
+                  Every Angle
+                  <br />
+                  Scrambles Text
                 </h3>
                 <p className="text-[13px] sm:text-[14px] leading-relaxed text-[#20251F]/75 font-normal">
-                  Smartphone camera tilts and perspective skew scramble character reading order before extraction even begins.
+                  Smartphone camera tilts and perspective skew scramble character reading order
+                  before extraction even begins.
                 </p>
               </div>
             </div>
@@ -971,28 +1094,98 @@ export const LandingPage = () => {
                 {/* Minimalist Isometric Wireframe 02: Sandbox Cube & Floating Cloud Sphere */}
                 <div className="my-8 lg:my-10 h-52 lg:h-64 flex items-center justify-center relative overflow-hidden wireframe-art">
                   <div className="absolute inset-0 drafting-grid-hover pointer-events-none" />
-                  <svg width="100%" height="100%" viewBox="0 0 200 170" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#20251F] relative z-10">
+                  <svg
+                    width="100%"
+                    height="100%"
+                    viewBox="0 0 200 170"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="text-[#20251F] relative z-10"
+                  >
                     {/* Dashed Privacy Boundary Ring */}
-                    <ellipse cx="100" cy="85" rx="72" ry="42" stroke="#214C3A" strokeOpacity="0.4" strokeWidth="1" strokeDasharray="4 4" className="wireframe-dash" />
-                    
+                    <ellipse
+                      cx="100"
+                      cy="85"
+                      rx="72"
+                      ry="42"
+                      stroke="#214C3A"
+                      strokeOpacity="0.4"
+                      strokeWidth="1"
+                      strokeDasharray="4 4"
+                      className="wireframe-dash"
+                    />
+
                     {/* Detached Cloud Sphere (Elevates on hover) */}
                     <g className="wireframe-sphere-float">
-                      <circle cx="100" cy="30" r="16" stroke="currentColor" strokeWidth="1.5" fill="rgba(243,239,227,0.9)" className="wireframe-draw-stroke" />
-                      <ellipse cx="100" cy="30" rx="16" ry="6" stroke="currentColor" strokeOpacity="0.4" strokeWidth="1" strokeDasharray="2 2" />
+                      <circle
+                        cx="100"
+                        cy="30"
+                        r="16"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        fill="rgba(243,239,227,0.9)"
+                        className="wireframe-draw-stroke"
+                      />
+                      <ellipse
+                        cx="100"
+                        cy="30"
+                        rx="16"
+                        ry="6"
+                        stroke="currentColor"
+                        strokeOpacity="0.4"
+                        strokeWidth="1"
+                        strokeDasharray="2 2"
+                      />
                       <circle cx="100" cy="30" r="3" fill="#E96C3F" />
-                      <line x1="100" y1="46" x2="100" y2="70" stroke="#E96C3F" strokeWidth="1.2" strokeDasharray="3 3" className="wireframe-dash" />
+                      <line
+                        x1="100"
+                        y1="46"
+                        x2="100"
+                        y2="70"
+                        stroke="#E96C3F"
+                        strokeWidth="1.2"
+                        strokeDasharray="3 3"
+                        className="wireframe-dash"
+                      />
                     </g>
 
                     {/* Precision Isometric Client Cube (Local Machine) */}
                     <g>
                       {/* Top Facet */}
-                      <path d="M100 70 L145 92 L100 114 L55 92 Z" stroke="currentColor" strokeWidth="1.5" fill="rgba(243,239,227,0.7)" className="wireframe-draw-stroke" />
+                      <path
+                        d="M100 70 L145 92 L100 114 L55 92 Z"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        fill="rgba(243,239,227,0.7)"
+                        className="wireframe-draw-stroke"
+                      />
                       {/* Left Facet */}
-                      <path d="M55 92 V132 L100 154 V114 Z" stroke="currentColor" strokeWidth="1.5" fill="rgba(32,37,31,0.03)" className="wireframe-draw-stroke" />
+                      <path
+                        d="M55 92 V132 L100 154 V114 Z"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        fill="rgba(32,37,31,0.03)"
+                        className="wireframe-draw-stroke"
+                      />
                       {/* Right Facet */}
-                      <path d="M145 92 V132 L100 154 V114 Z" stroke="currentColor" strokeWidth="1.5" fill="rgba(32,37,31,0.07)" className="wireframe-draw-stroke" />
+                      <path
+                        d="M145 92 V132 L100 154 V114 Z"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        fill="rgba(32,37,31,0.07)"
+                        className="wireframe-draw-stroke"
+                      />
                       {/* Internal Isometric Axes */}
-                      <line x1="100" y1="114" x2="100" y2="70" stroke="currentColor" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="2 2" />
+                      <line
+                        x1="100"
+                        y1="114"
+                        x2="100"
+                        y2="70"
+                        stroke="currentColor"
+                        strokeOpacity="0.25"
+                        strokeWidth="1"
+                        strokeDasharray="2 2"
+                      />
                     </g>
                   </svg>
                 </div>
@@ -1000,10 +1193,13 @@ export const LandingPage = () => {
 
               <div className="pt-4 border-t border-dashed border-[#20251F]/15">
                 <h3 className="text-xl sm:text-2xl lg:text-[1.65rem] font-black uppercase tracking-tight leading-[1.08] text-[#20251F] mb-3.5">
-                  Private Data<br />Leaves Machine
+                  Private Data
+                  <br />
+                  Leaves Machine
                 </h3>
                 <p className="text-[13px] sm:text-[14px] leading-relaxed text-[#20251F]/75 font-normal">
-                  Cloud APIs upload confidential invoices and personal documents to third-party servers, compromising data sovereignty.
+                  Cloud APIs upload confidential invoices and personal documents to third-party
+                  servers, compromising data sovereignty.
                 </p>
               </div>
             </div>
@@ -1019,20 +1215,70 @@ export const LandingPage = () => {
                 {/* Minimalist Isometric Wireframe 03: Precision Lens & Document Scan Slice */}
                 <div className="my-8 lg:my-10 h-52 lg:h-64 flex items-center justify-center relative overflow-hidden wireframe-art">
                   <div className="absolute inset-0 drafting-grid-hover pointer-events-none" />
-                  <svg width="100%" height="100%" viewBox="0 0 200 170" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#20251F] relative z-10">
+                  <svg
+                    width="100%"
+                    height="100%"
+                    viewBox="0 0 200 170"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="text-[#20251F] relative z-10"
+                  >
                     {/* Primary Precision Circular Lens */}
-                    <circle cx="100" cy="85" r="66" stroke="currentColor" strokeWidth="1.5" className="wireframe-draw-stroke group-hover:stroke-[#E96C3F] transition-colors duration-500" />
-                    
+                    <circle
+                      cx="100"
+                      cy="85"
+                      r="66"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      className="wireframe-draw-stroke group-hover:stroke-[#E96C3F] transition-colors duration-500"
+                    />
+
                     {/* Outer Coordinate Chords */}
-                    <path d="M100 19 V151 M34 85 H166" stroke="currentColor" strokeOpacity="0.15" strokeWidth="1" strokeDasharray="2 4" />
-                    
+                    <path
+                      d="M100 19 V151 M34 85 H166"
+                      stroke="currentColor"
+                      strokeOpacity="0.15"
+                      strokeWidth="1"
+                      strokeDasharray="2 4"
+                    />
+
                     {/* Isometric Document Plane Inside Lens */}
-                    <path d="M65 85 L100 64 L135 85 L100 106 Z" stroke="currentColor" strokeWidth="1.3" fill="rgba(243,239,227,0.8)" className="wireframe-draw-stroke" />
-                    <line x1="78" y1="82" x2="115" y2="72" stroke="currentColor" strokeOpacity="0.4" strokeWidth="1" />
-                    <line x1="85" y1="92" x2="122" y2="82" stroke="currentColor" strokeOpacity="0.4" strokeWidth="1" />
-                    
+                    <path
+                      d="M65 85 L100 64 L135 85 L100 106 Z"
+                      stroke="currentColor"
+                      strokeWidth="1.3"
+                      fill="rgba(243,239,227,0.8)"
+                      className="wireframe-draw-stroke"
+                    />
+                    <line
+                      x1="78"
+                      y1="82"
+                      x2="115"
+                      y2="72"
+                      stroke="currentColor"
+                      strokeOpacity="0.4"
+                      strokeWidth="1"
+                    />
+                    <line
+                      x1="85"
+                      y1="92"
+                      x2="122"
+                      y2="82"
+                      stroke="currentColor"
+                      strokeOpacity="0.4"
+                      strokeWidth="1"
+                    />
+
                     {/* Horizontal Scan Threshold Laser Line */}
-                    <line x1="25" y1="85" x2="175" y2="85" stroke="#E96C3F" strokeWidth="1.5" className="wireframe-dash" />
+                    <line
+                      x1="25"
+                      y1="85"
+                      x2="175"
+                      y2="85"
+                      stroke="#E96C3F"
+                      strokeWidth="1.5"
+                      className="wireframe-dash"
+                    />
                     <circle cx="25" cy="85" r="2.5" fill="#E96C3F" />
                     <circle cx="175" cy="85" r="2.5" fill="#E96C3F" />
                   </svg>
@@ -1041,10 +1287,13 @@ export const LandingPage = () => {
 
               <div className="pt-4 border-t border-dashed border-[#20251F]/15">
                 <h3 className="text-xl sm:text-2xl lg:text-[1.65rem] font-black uppercase tracking-tight leading-[1.08] text-[#20251F] mb-3.5">
-                  Faded Scans<br />Dissolve to Noise
+                  Faded Scans
+                  <br />
+                  Dissolve to Noise
                 </h3>
                 <p className="text-[13px] sm:text-[14px] leading-relaxed text-[#20251F]/75 font-normal">
-                  Thermal register paper and low-contrast mobile scans dissolve critical numbers into unreadable punctuation garbage.
+                  Thermal register paper and low-contrast mobile scans dissolve critical numbers
+                  into unreadable punctuation garbage.
                 </p>
               </div>
             </div>
@@ -1060,25 +1309,96 @@ export const LandingPage = () => {
                 {/* Minimalist Isometric Wireframe 04: Stacked Planes & Tabular Matrix Separation */}
                 <div className="my-8 lg:my-10 h-52 lg:h-64 flex items-center justify-center relative overflow-hidden wireframe-art">
                   <div className="absolute inset-0 drafting-grid-hover pointer-events-none" />
-                  <svg width="100%" height="100%" viewBox="0 0 200 170" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#20251F] relative z-10">
+                  <svg
+                    width="100%"
+                    height="100%"
+                    viewBox="0 0 200 170"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="text-[#20251F] relative z-10"
+                  >
                     {/* Lower Base Plane (Unstructured Floor) */}
-                    <path d="M35 115 L100 80 L165 115 L100 150 Z" stroke="currentColor" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 3" />
-                    
+                    <path
+                      d="M35 115 L100 80 L165 115 L100 150 Z"
+                      stroke="currentColor"
+                      strokeOpacity="0.25"
+                      strokeWidth="1"
+                      strokeDasharray="3 3"
+                    />
+
                     {/* Connecting Vertical Column Rays */}
-                    <line x1="35" y1="65" x2="35" y2="115" stroke="currentColor" strokeOpacity="0.3" strokeWidth="1" className="wireframe-dash" />
-                    <line x1="165" y1="65" x2="165" y2="115" stroke="currentColor" strokeOpacity="0.3" strokeWidth="1" className="wireframe-dash" />
-                    <line x1="100" y1="30" x2="100" y2="80" stroke="currentColor" strokeOpacity="0.3" strokeWidth="1" className="wireframe-dash" />
-                    <line x1="100" y1="100" x2="100" y2="150" stroke="currentColor" strokeOpacity="0.3" strokeWidth="1" className="wireframe-dash" />
+                    <line
+                      x1="35"
+                      y1="65"
+                      x2="35"
+                      y2="115"
+                      stroke="currentColor"
+                      strokeOpacity="0.3"
+                      strokeWidth="1"
+                      className="wireframe-dash"
+                    />
+                    <line
+                      x1="165"
+                      y1="65"
+                      x2="165"
+                      y2="115"
+                      stroke="currentColor"
+                      strokeOpacity="0.3"
+                      strokeWidth="1"
+                      className="wireframe-dash"
+                    />
+                    <line
+                      x1="100"
+                      y1="30"
+                      x2="100"
+                      y2="80"
+                      stroke="currentColor"
+                      strokeOpacity="0.3"
+                      strokeWidth="1"
+                      className="wireframe-dash"
+                    />
+                    <line
+                      x1="100"
+                      y1="100"
+                      x2="100"
+                      y2="150"
+                      stroke="currentColor"
+                      strokeOpacity="0.3"
+                      strokeWidth="1"
+                      className="wireframe-dash"
+                    />
 
                     {/* Elevated Structured Matrix Plane (Floats Upward on Hover) */}
                     <g className="wireframe-plane-float">
                       {/* Perimeter Frame */}
-                      <path d="M35 65 L100 30 L165 65 L100 100 Z" stroke="currentColor" strokeWidth="1.5" fill="rgba(243,239,227,0.85)" className="wireframe-draw-stroke" />
-                      
+                      <path
+                        d="M35 65 L100 30 L165 65 L100 100 Z"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        fill="rgba(243,239,227,0.85)"
+                        className="wireframe-draw-stroke"
+                      />
+
                       {/* Table Column Dividers */}
-                      <line x1="68" y1="48" x2="133" y2="83" stroke="currentColor" strokeOpacity="0.5" strokeWidth="1" />
-                      <line x1="133" y1="48" x2="68" y2="83" stroke="currentColor" strokeOpacity="0.5" strokeWidth="1" />
-                      
+                      <line
+                        x1="68"
+                        y1="48"
+                        x2="133"
+                        y2="83"
+                        stroke="currentColor"
+                        strokeOpacity="0.5"
+                        strokeWidth="1"
+                      />
+                      <line
+                        x1="133"
+                        y1="48"
+                        x2="68"
+                        y2="83"
+                        stroke="currentColor"
+                        strokeOpacity="0.5"
+                        strokeWidth="1"
+                      />
+
                       {/* Center Accent Matrix Node */}
                       <circle cx="100" cy="65" r="2.5" fill="#E96C3F" />
                     </g>
@@ -1088,10 +1408,13 @@ export const LandingPage = () => {
 
               <div className="pt-4 border-t border-dashed border-[#20251F]/15">
                 <h3 className="text-xl sm:text-2xl lg:text-[1.65rem] font-black uppercase tracking-tight leading-[1.08] text-[#20251F] mb-3.5">
-                  Flat Dumps<br />Destroy Structure
+                  Flat Dumps
+                  <br />
+                  Destroy Structure
                 </h3>
                 <p className="text-[13px] sm:text-[14px] leading-relaxed text-[#20251F]/75 font-normal">
-                  Standard OCR dumps unsegmented string soup, discarding tables, spreadsheets, and key-value relationships.
+                  Standard OCR dumps unsegmented string soup, discarding tables, spreadsheets, and
+                  key-value relationships.
                 </p>
               </div>
             </div>
@@ -1104,7 +1427,11 @@ export const LandingPage = () => {
       {/* ═══════════════════════════════════════════════════════
           PHASE 6: PRICING — Technical Specification Tiers
           ═══════════════════════════════════════════════════════ */}
-      <section ref={pricingRef} id="pricing" className="py-20 md:py-28 max-w-[1400px] mx-auto px-6 relative z-10">
+      <section
+        ref={pricingRef}
+        id="pricing"
+        className="py-20 md:py-28 max-w-[1400px] mx-auto px-6 relative z-10"
+      >
         <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#20251F]/20 pb-5 mb-10">
           <div>
             <div className="font-mono-industrial text-[9px] font-bold tracking-[0.18em] uppercase text-[#20251F]/50 mb-2 flex items-center gap-2">
@@ -1115,15 +1442,21 @@ export const LandingPage = () => {
               className="uppercase font-black leading-[0.9] tracking-[-0.04em] text-[#20251F]"
               style={{ fontSize: 'clamp(1.8rem, 4vw, 3.5rem)' }}
             >
-              100% Client-Side.<br />Zero Paywalls.
+              100% Client-Side.
+              <br />
+              Zero Paywalls.
             </h2>
           </div>
           <p className="mt-4 md:mt-0 font-mono-industrial text-[10px] md:text-[11px] font-semibold tracking-[0.03em] leading-[1.6] uppercase text-[#20251F]/60 max-w-md">
-            All text translation executes inside your local browser memory via WebAssembly. Both tiers are completely free and open source.
+            All text translation executes inside your local browser memory via WebAssembly. Both
+            tiers are completely free and open source.
           </p>
         </div>
 
-        <div className="pricing-grid grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto" style={{ perspective: '800px' }}>
+        <div
+          className="pricing-grid grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto"
+          style={{ perspective: '800px' }}
+        >
           {PRICING_TIERS.map((tier) => (
             <div
               key={tier.ref}
@@ -1134,8 +1467,12 @@ export const LandingPage = () => {
               }`}
             >
               {/* Corner Crosshairs */}
-              <span className="absolute top-2 left-2 font-mono-industrial text-[9px] text-[#20251F]/30">+</span>
-              <span className="absolute top-2 right-2 font-mono-industrial text-[9px] text-[#20251F]/30">+</span>
+              <span className="absolute top-2 left-2 font-mono-industrial text-[9px] text-[#20251F]/30">
+                +
+              </span>
+              <span className="absolute top-2 right-2 font-mono-industrial text-[9px] text-[#20251F]/30">
+                +
+              </span>
 
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -1143,11 +1480,13 @@ export const LandingPage = () => {
                     {tier.ref}
                   </span>
                   {tier.badge && (
-                    <span className={`px-2 py-0.5 font-mono-industrial text-[8px] font-bold tracking-[0.15em] uppercase border ${
-                      tier.isPro
-                        ? 'bg-[#214C3A] text-[#FFFDF7] border-[#214C3A]'
-                        : 'bg-[#20251F]/5 text-[#20251F]/70 border-[#20251F]/20'
-                    }`}>
+                    <span
+                      className={`px-2 py-0.5 font-mono-industrial text-[8px] font-bold tracking-[0.15em] uppercase border ${
+                        tier.isPro
+                          ? 'bg-[#214C3A] text-[#FFFDF7] border-[#214C3A]'
+                          : 'bg-[#20251F]/5 text-[#20251F]/70 border-[#20251F]/20'
+                      }`}
+                    >
                       {tier.badge}
                     </span>
                   )}
@@ -1162,7 +1501,9 @@ export const LandingPage = () => {
 
                 {/* Price Display */}
                 <div className="flex items-baseline gap-2 pb-6 border-b border-[#20251F]/15 mb-6">
-                  <span className="text-3xl md:text-4xl font-black tracking-tight text-[#20251F]">{tier.price}</span>
+                  <span className="text-3xl md:text-4xl font-black tracking-tight text-[#20251F]">
+                    {tier.price}
+                  </span>
                   <span className="font-mono-industrial text-[9px] font-bold tracking-[0.12em] uppercase text-[#20251F]/60">
                     / {tier.billing}
                   </span>
@@ -1171,7 +1512,10 @@ export const LandingPage = () => {
                 {/* Feature Checklist */}
                 <div className="space-y-3 mb-8">
                   {tier.features.map((feature, fIdx) => (
-                    <div key={fIdx} className="pricing-feature-item flex items-start gap-2.5 will-change-transform">
+                    <div
+                      key={fIdx}
+                      className="pricing-feature-item flex items-start gap-2.5 will-change-transform"
+                    >
                       <span className="font-mono-industrial text-[10px] font-bold text-[#E96C3F] flex-shrink-0 mt-0.5">
                         &bull;
                       </span>
@@ -1202,7 +1546,11 @@ export const LandingPage = () => {
       {/* ═══════════════════════════════════════════════════════
           PHASE 6: OPEN SOURCE COMMUNITY — Privacy & Utility
           ═══════════════════════════════════════════════════════ */}
-      <section ref={openSourceRef} id="open-source" className="py-20 md:py-28 max-w-[1400px] mx-auto px-6 relative z-10 border-t border-[#20251F]/20">
+      <section
+        ref={openSourceRef}
+        id="open-source"
+        className="py-20 md:py-28 max-w-[1400px] mx-auto px-6 relative z-10 border-t border-[#20251F]/20"
+      >
         <div className="os-header border-b border-[#20251F]/20 pb-5 mb-8">
           <div className="font-mono-industrial text-[9px] font-bold tracking-[0.18em] uppercase text-[#20251F]/50 mb-2 flex items-center gap-2">
             <span className="text-[#E96C3F]">[ 05 ]</span>
@@ -1212,12 +1560,16 @@ export const LandingPage = () => {
             className="uppercase font-black leading-[0.9] tracking-[-0.04em] text-[#20251F]"
             style={{ fontSize: 'clamp(1.8rem, 4vw, 3.5rem)' }}
           >
-            Privacy by default,<br />utility by design.
+            Privacy by default,
+            <br />
+            utility by design.
           </h2>
         </div>
 
         <p className="os-desc font-mono-industrial text-[11px] md:text-[12px] font-semibold tracking-[0.03em] leading-[1.6] uppercase text-[#20251F]/70 max-w-2xl mb-8">
-          Textify is open source and dedicated to making browser-based document extraction secure, deterministic, and lightweight. Explore the code, run it completely offline, or connect your own cloud archive.
+          Textify is open source and dedicated to making browser-based document extraction secure,
+          deterministic, and lightweight. Explore the code, run it completely offline, or connect
+          your own cloud archive.
         </p>
 
         <div className="flex flex-wrap items-center gap-3 mb-16 relative z-10">
@@ -1229,14 +1581,14 @@ export const LandingPage = () => {
             onMouseMove={handleMagneticMove}
             onMouseLeave={handleMagneticLeave}
           >
-            <GithubLogo className="w-4 h-4" weight="bold" />
+            <GitBranch className="w-4 h-4" />
             View on GitHub
           </a>
           <Link
             to="/docs"
             className="os-btn btn-border-expand border border-[#20251F]/30 bg-transparent text-[#20251F] px-6 py-3 font-mono-industrial text-[10px] md:text-[11px] font-bold tracking-[0.1em] uppercase hover:bg-[#20251F]/5 active:scale-[0.98] transition-all flex items-center gap-2 relative z-10 cursor-pointer"
           >
-            <BookOpen className="w-4 h-4" weight="bold" />
+            <BookOpen className="w-4 h-4" />
             Documentation
           </Link>
         </div>
@@ -1250,19 +1602,26 @@ export const LandingPage = () => {
             }}
             className="os-card p-6 md:p-8 border border-[#20251F]/20 bg-[#FFFDF7] flex flex-col justify-between min-h-[220px] text-left relative group transition-all duration-300 hover:border-[#20251F] hover:-translate-y-0.5 shadow-drafting-sm hover:shadow-drafting cursor-pointer"
           >
-            <span className="absolute top-2 left-2 font-mono-industrial text-[9px] text-[#20251F]/30">+</span>
+            <span className="absolute top-2 left-2 font-mono-industrial text-[9px] text-[#20251F]/30">
+              +
+            </span>
             <div className="w-full">
               <div className="flex items-center justify-between mb-4">
-                <span className="font-mono-industrial text-[9px] font-bold tracking-[0.15em] text-[#20251F]/50">[01 / CODE]</span>
-                <Code className="w-5 h-5 text-[#20251F]/40 group-hover:text-[#214C3A] group-hover:scale-110 transition-all duration-300" weight="bold" />
+                <span className="font-mono-industrial text-[9px] font-bold tracking-[0.15em] text-[#20251F]/50">
+                  [01 / CODE]
+                </span>
+                <Code className="w-5 h-5 text-[#20251F]/40 group-hover:text-[#214C3A] group-hover:scale-110 transition-all duration-300" />
               </div>
-              <h3 className="text-lg font-black uppercase tracking-tight mb-2 text-[#20251F]">Code Contributions</h3>
+              <h3 className="text-lg font-black uppercase tracking-tight mb-2 text-[#20251F]">
+                Code Contributions
+              </h3>
               <p className="font-mono-industrial text-[10px] md:text-[11px] font-semibold tracking-[0.03em] leading-[1.5] uppercase text-[#20251F]/60">
-                Help improve the AI models, OCR pipeline, or UI. Pull requests of all sizes are welcome from the community.
+                Help improve the AI models, OCR pipeline, or UI. Pull requests of all sizes are
+                welcome from the community.
               </p>
             </div>
             <div className="mt-4 font-mono-industrial text-[9px] font-bold text-[#20251F]/50 group-hover:text-[#214C3A] transition-colors flex items-center gap-1.5 w-full">
-              INITIALIZE CONTRIBUTION <ArrowRight className="w-3.5 h-3.5" weight="bold" />
+              INITIALIZE CONTRIBUTION <ArrowRight className="w-3.5 h-3.5" />
             </div>
           </button>
 
@@ -1276,19 +1635,26 @@ export const LandingPage = () => {
             }}
             className="os-card p-6 md:p-8 border border-[#20251F]/20 bg-[#FFFDF7] flex flex-col justify-between min-h-[220px] text-left relative group transition-all duration-300 hover:border-[#20251F] hover:-translate-y-0.5 shadow-drafting-sm hover:shadow-drafting cursor-pointer"
           >
-            <span className="absolute top-2 left-2 font-mono-industrial text-[9px] text-[#20251F]/30">+</span>
+            <span className="absolute top-2 left-2 font-mono-industrial text-[9px] text-[#20251F]/30">
+              +
+            </span>
             <div className="w-full">
               <div className="flex items-center justify-between mb-4">
-                <span className="font-mono-industrial text-[9px] font-bold tracking-[0.15em] text-[#20251F]/50">[02 / BUG]</span>
-                <Bug className="w-5 h-5 text-[#20251F]/40 group-hover:text-[#E96C3F] group-hover:scale-110 transition-all duration-300" weight="bold" />
+                <span className="font-mono-industrial text-[9px] font-bold tracking-[0.15em] text-[#20251F]/50">
+                  [02 / BUG]
+                </span>
+                <Bug className="w-5 h-5 text-[#20251F]/40 group-hover:text-[#E96C3F] group-hover:scale-110 transition-all duration-300" />
               </div>
-              <h3 className="text-lg font-black uppercase tracking-tight mb-2 text-[#20251F]">Report Bugs</h3>
+              <h3 className="text-lg font-black uppercase tracking-tight mb-2 text-[#20251F]">
+                Report Bugs
+              </h3>
               <p className="font-mono-industrial text-[10px] md:text-[11px] font-semibold tracking-[0.03em] leading-[1.5] uppercase text-[#20251F]/60">
-                Found an issue? Open a GitHub issue with details to help track and fix bugs as the project moves toward a stable release.
+                Found an issue? Open a GitHub issue with details to help track and fix bugs as the
+                project moves toward a stable release.
               </p>
             </div>
             <div className="mt-4 font-mono-industrial text-[9px] font-bold text-[#20251F]/50 group-hover:text-[#E96C3F] transition-colors flex items-center gap-1.5 w-full">
-              SUBMIT ERROR REPORT <ArrowRight className="w-3.5 h-3.5" weight="bold" />
+              SUBMIT ERROR REPORT <ArrowRight className="w-3.5 h-3.5" />
             </div>
           </button>
 
@@ -1302,19 +1668,26 @@ export const LandingPage = () => {
             }}
             className="os-card p-6 md:p-8 border border-[#20251F]/20 bg-[#FFFDF7] flex flex-col justify-between min-h-[220px] text-left relative group transition-all duration-300 hover:border-[#20251F] hover:-translate-y-0.5 shadow-drafting-sm hover:shadow-drafting cursor-pointer"
           >
-            <span className="absolute top-2 left-2 font-mono-industrial text-[9px] text-[#20251F]/30">+</span>
+            <span className="absolute top-2 left-2 font-mono-industrial text-[9px] text-[#20251F]/30">
+              +
+            </span>
             <div className="w-full">
               <div className="flex items-center justify-between mb-4">
-                <span className="font-mono-industrial text-[9px] font-bold tracking-[0.15em] text-[#20251F]/50">[03 / CHAT]</span>
-                <Chats className="w-5 h-5 text-[#20251F]/40 group-hover:text-[#214C3A] group-hover:scale-110 transition-all duration-300" weight="bold" />
+                <span className="font-mono-industrial text-[9px] font-bold tracking-[0.15em] text-[#20251F]/50">
+                  [03 / CHAT]
+                </span>
+                <MessageSquare className="w-5 h-5 text-[#20251F]/40 group-hover:text-[#214C3A] group-hover:scale-110 transition-all duration-300" />
               </div>
-              <h3 className="text-lg font-black uppercase tracking-tight mb-2 text-[#20251F]">Share Feedback</h3>
+              <h3 className="text-lg font-black uppercase tracking-tight mb-2 text-[#20251F]">
+                Share Feedback
+              </h3>
               <p className="font-mono-industrial text-[10px] md:text-[11px] font-semibold tracking-[0.03em] leading-[1.5] uppercase text-[#20251F]/60">
-                Share thoughts on how you're using Textify. Feedback directly influences the project roadmap and the features built next.
+                Share thoughts on how you're using Textify. Feedback directly influences the project
+                roadmap and the features built next.
               </p>
             </div>
             <div className="mt-4 font-mono-industrial text-[9px] font-bold text-[#20251F]/50 group-hover:text-[#214C3A] transition-colors flex items-center gap-1.5 w-full">
-              TRANSMIT INSIGHTS <ArrowRight className="w-3.5 h-3.5" weight="bold" />
+              TRANSMIT INSIGHTS <ArrowRight className="w-3.5 h-3.5" />
             </div>
           </button>
         </div>
@@ -1323,7 +1696,10 @@ export const LandingPage = () => {
       {/* ═══════════════════════════════════════════════════════
           PHASE 6: CTA BANNER — Architectural Ledger Strip
           ═══════════════════════════════════════════════════════ */}
-      <section ref={ctaBannerRef} className="border-y border-[#20251F]/20 bg-[#FFFDF7] relative z-10 overflow-hidden">
+      <section
+        ref={ctaBannerRef}
+        className="border-y border-[#20251F]/20 bg-[#FFFDF7] relative z-10 overflow-hidden"
+      >
         <div className="max-w-[1400px] mx-auto px-6 py-16 md:py-20 grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
           <div className="cta-text-block md:col-span-8 will-change-transform">
             <div className="font-mono-industrial text-[9px] font-bold tracking-[0.18em] uppercase text-[#20251F]/50 mb-3 flex items-center gap-2">
@@ -1334,10 +1710,13 @@ export const LandingPage = () => {
               className="uppercase font-black leading-[0.88] tracking-[-0.04em] text-[#20251F]"
               style={{ fontSize: 'clamp(1.5rem, 4vw, 3rem)' }}
             >
-              Ready to extract<br />text from any image?
+              Ready to extract
+              <br />
+              text from any image?
             </h2>
             <p className="font-mono-industrial text-[10px] md:text-[11px] font-semibold tracking-[0.03em] leading-[1.6] uppercase text-[#20251F]/60 max-w-lg mt-4">
-              Experience layout-aware OCR processing directly in your browser. Clean, private, and synced with local memory.
+              Experience layout-aware OCR processing directly in your browser. Clean, private, and
+              synced with local memory.
             </p>
           </div>
           <div className="md:col-span-4 flex md:justify-end">
@@ -1349,7 +1728,7 @@ export const LandingPage = () => {
               onMouseMove={handleMagneticMove}
               onMouseLeave={handleMagneticLeave}
             >
-              LAUNCH WORKSPACE <ArrowRight className="w-4 h-4" weight="bold" />
+              LAUNCH WORKSPACE <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
@@ -1370,14 +1749,19 @@ export const LandingPage = () => {
                 aria-label="Refresh Page"
               >
                 <div className="w-6 h-6 flex items-center justify-center">
-                  <img src="/New_Textify.png" alt="Textify" className="w-full h-full object-contain" />
+                  <img
+                    src="/New_Textify.png"
+                    alt="Textify"
+                    className="w-full h-full object-contain"
+                  />
                 </div>
                 <span className="font-black tracking-tight text-base normal-case text-[#20251F] group-hover:text-[#214C3A] transition-colors">
                   Textify<sup className="text-[7px]">&reg;</sup>
                 </span>
               </button>
               <p className="text-[9px] text-[#20251F]/60 tracking-[0.04em] max-w-sm leading-[1.6]">
-                ARCHITECTURAL DOCUMENT INTELLIGENCE SYSTEM. CLIENT-SIDE WEBASSEMBLY OPTICAL RECOGNITION WITH ZERO DATA LEAKAGE.
+                ARCHITECTURAL DOCUMENT INTELLIGENCE SYSTEM. CLIENT-SIDE WEBASSEMBLY OPTICAL
+                RECOGNITION WITH ZERO DATA LEAKAGE.
               </p>
             </div>
             <div className="pt-4 border-t border-[#20251F]/15 flex items-center gap-2 text-[8px] text-[#20251F]/40">
@@ -1397,8 +1781,16 @@ export const LandingPage = () => {
                 onClick={() => setInfoModalType(type)}
                 className="group text-left text-[#20251F]/70 hover:text-[#214C3A] transition-colors py-1 border-b border-[#20251F]/10 flex items-center justify-between cursor-pointer"
               >
-                <span>[ {type === 'privacy' ? 'PRIVACY POLICY' : type === 'terms' ? 'TERMS OF SERVICE' : 'DIAGNOSTIC SUPPORT'} ]</span>
-                <ArrowRight className="w-3.5 h-3.5 text-[#20251F]/50 group-hover:text-[#214C3A] group-hover:translate-x-1 transition-all" weight="bold" />
+                <span>
+                  [{' '}
+                  {type === 'privacy'
+                    ? 'PRIVACY POLICY'
+                    : type === 'terms'
+                      ? 'TERMS OF SERVICE'
+                      : 'DIAGNOSTIC SUPPORT'}{' '}
+                  ]
+                </span>
+                <ArrowRight className="w-3.5 h-3.5 text-[#20251F]/50 group-hover:text-[#214C3A] group-hover:translate-x-1 transition-all" />
               </button>
             ))}
           </div>
@@ -1415,14 +1807,14 @@ export const LandingPage = () => {
               className="group text-[#20251F]/70 hover:text-[#214C3A] transition-colors py-1 border-b border-[#20251F]/10 flex items-center justify-between"
             >
               <span>GITHUB REPOSITORY</span>
-              <ArrowUpRight className="w-3.5 h-3.5 text-[#20251F]/50 group-hover:text-[#214C3A] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" weight="bold" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-[#20251F]/50 group-hover:text-[#214C3A] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
             </a>
             <Link
               to="/docs"
               className="group text-[#20251F]/70 hover:text-[#214C3A] transition-colors py-1 border-b border-[#20251F]/10 flex items-center justify-between"
             >
               <span>TECHNICAL DOCS</span>
-              <ArrowRight className="w-3.5 h-3.5 text-[#20251F]/50 group-hover:text-[#214C3A] group-hover:translate-x-1 transition-all" weight="bold" />
+              <ArrowRight className="w-3.5 h-3.5 text-[#20251F]/50 group-hover:text-[#214C3A] group-hover:translate-x-1 transition-all" />
             </Link>
             <div className="text-[#20251F]/50 py-1 flex items-center justify-between">
               <span>MAINTAINER</span>
@@ -1434,8 +1826,8 @@ export const LandingPage = () => {
           <div className="md:col-span-2 flex items-center justify-center md:justify-end">
             <button
               onClick={() => {
-                if (typeof window !== 'undefined' && (window as any).__lenis) {
-                  (window as any).__lenis.scrollTo(0, { duration: 1.2 });
+                if (typeof window !== 'undefined' && window.__lenis) {
+                  window.__lenis.scrollTo(0, { duration: 1.2 });
                 } else {
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
@@ -1472,7 +1864,7 @@ export const LandingPage = () => {
                 onClick={() => setInfoModalType(null)}
                 className="hover:text-[#E96C3F] transition-colors cursor-pointer"
               >
-                <X className="w-4 h-4" weight="bold" />
+                <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-6">
@@ -1504,26 +1896,33 @@ export const LandingPage = () => {
                 onClick={() => setActiveOsModal(null)}
                 className="hover:text-[#E96C3F] transition-colors cursor-pointer"
               >
-                <X className="w-4 h-4" weight="bold" />
+                <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-6">
               <p className="font-mono-industrial text-[10px] md:text-[11px] font-semibold tracking-[0.03em] leading-[1.6] uppercase text-[#20251F]/75 mb-4">
-                We welcome community contributions. Clone the repository locally to begin development, customize OCR parameters, or tweak layout details.
+                We welcome community contributions. Clone the repository locally to begin
+                development, customize OCR parameters, or tweak layout details.
               </p>
 
               <div className="bg-[#20251F] text-[#FFFDF7] p-3 font-mono-industrial text-[10px] md:text-[11px] font-bold mb-6 flex items-center justify-between border border-[#20251F] select-all">
                 <span>git clone https://github.com/gnbaba/Textify.git</span>
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText('git clone https://github.com/gnbaba/Textify.git');
+                    navigator.clipboard.writeText(
+                      'git clone https://github.com/gnbaba/Textify.git'
+                    );
                     setCopiedCloneCmd(true);
                     setTimeout(() => setCopiedCloneCmd(false), 2000);
                   }}
                   className="text-[#FFFDF7]/75 hover:text-[#FFFDF7] flex-shrink-0 ml-2 cursor-pointer"
                   title="Copy clone command"
                 >
-                  {copiedCloneCmd ? <Check className="w-4 h-4 text-[#D9E4CB]" weight="bold" /> : <Copy className="w-4 h-4" weight="bold" />}
+                  {copiedCloneCmd ? (
+                    <Check className="w-4 h-4 text-[#D9E4CB]" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
                 </button>
               </div>
 
@@ -1555,16 +1954,19 @@ export const LandingPage = () => {
                 onClick={() => setActiveOsModal(null)}
                 className="hover:text-[#E96C3F] transition-colors cursor-pointer"
               >
-                <X className="w-4 h-4" weight="bold" />
+                <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-6">
               {bugSubmitted ? (
                 <div className="text-center py-6">
-                  <CheckCircle className="w-12 h-12 text-[#214C3A] mx-auto mb-3" weight="bold" />
-                  <h4 className="font-black uppercase text-base text-[#20251F] mb-1">Issue Recorded</h4>
+                  <CheckCircle className="w-12 h-12 text-[#214C3A] mx-auto mb-3" />
+                  <h4 className="font-black uppercase text-base text-[#20251F] mb-1">
+                    Issue Recorded
+                  </h4>
                   <p className="font-mono-industrial text-[9px] md:text-[10px] uppercase text-[#20251F]/60 max-w-xs mx-auto leading-relaxed">
-                    Bug report successfully filed in sandbox environment. You can copy these details for a GitHub ticket.
+                    Bug report successfully filed in sandbox environment. You can copy these details
+                    for a GitHub ticket.
                   </p>
                   <button
                     onClick={() => setActiveOsModal(null)}
@@ -1574,12 +1976,21 @@ export const LandingPage = () => {
                   </button>
                 </div>
               ) : (
-                <form onSubmit={(e) => { e.preventDefault(); setBugSubmitted(true); }} className="space-y-4">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setBugSubmitted(true);
+                  }}
+                  className="space-y-4"
+                >
                   <p className="font-mono-industrial text-[10px] uppercase text-[#20251F]/60 mb-2 leading-relaxed">
-                    Explain the error substrate so the maintainer index can evaluate and reconstruct code behaviors.
+                    Explain the error substrate so the maintainer index can evaluate and reconstruct
+                    code behaviors.
                   </p>
                   <div>
-                    <label className="block font-mono-industrial text-[8px] font-bold tracking-[0.1em] uppercase text-[#20251F]/60 mb-1">Issue title</label>
+                    <label className="block font-mono-industrial text-[8px] font-bold tracking-[0.1em] uppercase text-[#20251F]/60 mb-1">
+                      Issue title
+                    </label>
                     <input
                       type="text"
                       required
@@ -1590,7 +2001,9 @@ export const LandingPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block font-mono-industrial text-[8px] font-bold tracking-[0.1em] uppercase text-[#20251F]/60 mb-1">Bug explanation</label>
+                    <label className="block font-mono-industrial text-[8px] font-bold tracking-[0.1em] uppercase text-[#20251F]/60 mb-1">
+                      Bug explanation
+                    </label>
                     <textarea
                       required
                       rows={3}
@@ -1631,16 +2044,19 @@ export const LandingPage = () => {
                 onClick={() => setActiveOsModal(null)}
                 className="hover:text-[#E96C3F] transition-colors cursor-pointer"
               >
-                <X className="w-4 h-4" weight="bold" />
+                <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-6">
               {feedbackSubmitted ? (
                 <div className="text-center py-6">
-                  <CheckCircle className="w-12 h-12 text-[#214C3A] mx-auto mb-3" weight="bold" />
-                  <h4 className="font-black uppercase text-base text-[#20251F] mb-1">Feedback Logged</h4>
+                  <CheckCircle className="w-12 h-12 text-[#214C3A] mx-auto mb-3" />
+                  <h4 className="font-black uppercase text-base text-[#20251F] mb-1">
+                    Feedback Logged
+                  </h4>
                   <p className="font-mono-industrial text-[9px] md:text-[10px] uppercase text-[#20251F]/60 max-w-xs mx-auto leading-relaxed">
-                    Thank you. Feedback directly influences the project roadmap and features built next.
+                    Thank you. Feedback directly influences the project roadmap and features built
+                    next.
                   </p>
                   <button
                     onClick={() => setActiveOsModal(null)}
@@ -1650,22 +2066,33 @@ export const LandingPage = () => {
                   </button>
                 </div>
               ) : (
-                <form onSubmit={(e) => { e.preventDefault(); setFeedbackSubmitted(true); }} className="space-y-4">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setFeedbackSubmitted(true);
+                  }}
+                  className="space-y-4"
+                >
                   <p className="font-mono-industrial text-[10px] uppercase text-[#20251F]/60 mb-2 leading-relaxed">
-                    Share ratings and comments on how we can make Textify document scraping more optimal.
+                    Share ratings and comments on how we can make Textify document scraping more
+                    optimal.
                   </p>
                   <div>
-                    <label className="block font-mono-industrial text-[8px] font-bold tracking-[0.1em] uppercase text-[#20251F]/60 mb-2">experience quality</label>
+                    <label className="block font-mono-industrial text-[8px] font-bold tracking-[0.1em] uppercase text-[#20251F]/60 mb-2">
+                      experience quality
+                    </label>
                     <div className="grid grid-cols-3 gap-2">
                       {[
                         { id: 'awesome', label: 'AWESOME' },
                         { id: 'good', label: 'GOOD' },
-                        { id: 'work', label: 'NEEDS WORK' }
+                        { id: 'work', label: 'NEEDS WORK' },
                       ].map((rating) => (
                         <button
                           key={rating.id}
                           type="button"
-                          onClick={() => setFeedbackRating(rating.id as 'awesome' | 'good' | 'work')}
+                          onClick={() =>
+                            setFeedbackRating(rating.id as 'awesome' | 'good' | 'work')
+                          }
                           className={`py-2 border text-[8px] font-mono-industrial font-bold uppercase transition-all cursor-pointer ${
                             feedbackRating === rating.id
                               ? 'bg-[#214C3A] text-[#FFFDF7] border-[#214C3A]'
@@ -1678,7 +2105,9 @@ export const LandingPage = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="block font-mono-industrial text-[8px] font-bold tracking-[0.1em] uppercase text-[#20251F]/60 mb-1">insights & suggestions</label>
+                    <label className="block font-mono-industrial text-[8px] font-bold tracking-[0.1em] uppercase text-[#20251F]/60 mb-1">
+                      insights & suggestions
+                    </label>
                     <textarea
                       required
                       rows={3}
@@ -1718,7 +2147,7 @@ export const LandingPage = () => {
         }`}
         aria-label="Back to top"
       >
-        <ArrowUp className="w-4 h-4" weight="bold" />
+        <ArrowUp className="w-4 h-4" />
       </button>
     </main>
   );

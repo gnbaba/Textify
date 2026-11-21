@@ -1,16 +1,47 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isValidBlock(b) {
+      return b is map
+        && b.keys().hasOnly(['id', 'text', 'timestamp', 'order'])
+        && b.id is string && b.id.size() <= 100
+        && b.text is string && b.text.size() <= 50000
+        && b.timestamp is number
+        && (!('order' in b) || b.order is number);
+    }
+
+    function isValidBlocksList(list) {
+      return list is list
+        && list.size() <= 100
+        && (list.size() == 0 || (isValidBlock(list[0]) && isValidBlock(list[list.size() - 1])));
+    }
+
     // Restrict access so users can only access their own subcollection
     match /users/{userId}/documents/{documentId} {
       allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if request.auth != null && request.auth.uid == userId
-                   && request.resource.data.keys().hasOnly(['title', 'timestamp', 'blocks', 'isPinned', 'pinnedAt'])
-                   && (!request.resource.data.keys().hasAny(['title']) || request.resource.data.title is string)
-                   && (!request.resource.data.keys().hasAny(['timestamp']) || request.resource.data.timestamp is number)
-                   && (!request.resource.data.keys().hasAny(['blocks']) || request.resource.data.blocks is list)
-                   && (!request.resource.data.keys().hasAny(['isPinned']) || request.resource.data.isPinned is bool)
-                   && (!request.resource.data.keys().hasAny(['pinnedAt']) || request.resource.data.pinnedAt == null || request.resource.data.pinnedAt is number);
+
+      allow delete: if request.auth != null && request.auth.uid == userId;
+
+      allow create: if request.auth != null && request.auth.uid == userId
+                    && request.resource.data.keys().hasOnly(['title', 'timestamp', 'blocks', 'isPinned', 'pinnedAt'])
+                    && request.resource.data.title is string && request.resource.data.title.size() <= 200
+                    && request.resource.data.timestamp is number
+                    && (!('blocks' in request.resource.data) || isValidBlocksList(request.resource.data.blocks))
+                    && (!('isPinned' in request.resource.data) || request.resource.data.isPinned is bool)
+                    && (!('pinnedAt' in request.resource.data) || request.resource.data.pinnedAt == null || request.resource.data.pinnedAt is number);
+
+      allow update: if request.auth != null && request.auth.uid == userId
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'blocks', 'isPinned', 'pinnedAt', 'timestamp'])
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['title']) || (request.resource.data.title is string && request.resource.data.title.size() <= 200))
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['timestamp']) || request.resource.data.timestamp is number)
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['blocks']) || isValidBlocksList(request.resource.data.blocks))
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isPinned']) || request.resource.data.isPinned is bool)
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['pinnedAt']) || request.resource.data.pinnedAt == null || request.resource.data.pinnedAt is number);
+    }
+
+    match /users/{userId}/usage/{dateId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
     }
   }
 }

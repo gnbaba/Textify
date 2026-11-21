@@ -1,6 +1,6 @@
+import { Check, X } from 'lucide-react';
 import React, { useState } from 'react';
-import { useAuth } from '../hooks/useAuth'; 
-import { X, Check } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -21,24 +21,29 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#20251F]/50 backdrop-blur-sm px-4 font-mono-industrial text-[#20251F]">
       <div className="bg-[#FFFDF7] w-full max-w-sm border border-[#20251F] shadow-drafting-lg overflow-hidden">
-        
         {/* Header bar */}
         <div className="bg-[#20251F] text-[#FFFDF7] px-4 py-2.5 flex items-center justify-between font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase">
           <span>[ AUTHENTICATE ]</span>
-          <button onClick={onClose} className="hover:text-[#E96C3F] transition-colors cursor-pointer" aria-label="Close">
+          <button
+            onClick={onClose}
+            className="hover:text-[#E96C3F] transition-colors cursor-pointer"
+            aria-label="Close"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <div className="p-6">
-          <h2 className="text-sm font-black uppercase mb-1.5 tracking-tight text-[#20251F]">WELCOME TO TEXTIFY</h2>
+          <h2 className="text-sm font-black uppercase mb-1.5 tracking-tight text-[#20251F]">
+            WELCOME TO TEXTIFY
+          </h2>
           <p className="text-[#20251F]/65 text-[10px] font-semibold uppercase leading-relaxed tracking-[0.02em] mb-6">
             SIGN IN TO ACCESS YOUR SECURE CLOUD STORAGE AND UNLIMITED EXTRACTIONS.
           </p>
 
           {/* Login Button */}
-          <button 
-            onClick={handleLoginClick} 
+          <button
+            onClick={handleLoginClick}
             className="w-full bg-[#FFFDF7] border border-[#20251F]/30 text-[#20251F] py-3 px-4 font-bold text-[10px] tracking-[0.1em] uppercase hover:bg-[#20251F] hover:text-[#FFFDF7] transition-all flex items-center justify-center gap-3 mb-6 shadow-drafting-sm cursor-pointer"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
@@ -53,8 +58,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
           {/* Remember Me Checkbox */}
           <label className="flex items-center gap-3 cursor-pointer group select-none">
             <div className="relative flex items-center justify-center">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
                 className="peer appearance-none w-4 h-4 border border-[#20251F]/40 bg-[#F3EFE3] checked:bg-[#214C3A] checked:border-[#214C3A] transition-colors cursor-pointer"
@@ -65,7 +70,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
               REMEMBER ME ON THIS DEVICE
             </span>
           </label>
-
         </div>
       </div>
     </div>

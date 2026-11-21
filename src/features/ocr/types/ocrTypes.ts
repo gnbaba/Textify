@@ -14,6 +14,8 @@ export interface OcrOptions {
   thresholdMode?: 'adaptive' | 'manual';
   deskew?: boolean;
   engine?: 'local' | 'ai';
+  isStale?: () => boolean;
+  signal?: AbortSignal;
 }
 
 export interface IOcrService {

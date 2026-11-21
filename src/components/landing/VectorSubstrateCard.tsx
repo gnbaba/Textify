@@ -1,11 +1,5 @@
+import { Check, Copy, FileText, Lock, Upload } from 'lucide-react';
 import React from 'react';
-import {
-  UploadSimple,
-  LockKey,
-  FileText,
-  Copy,
-  Check,
-} from '@phosphor-icons/react';
 
 export interface VectorSubstrateCardProps {
   progress?: number;
@@ -64,7 +58,7 @@ export const VectorSubstrateCard: React.FC<VectorSubstrateCardProps> = ({
   const wireframeOpacity = t2;
 
   // ── Stage 3: Glyphs & Typography Reveal (0.50 -> 0.75) ──
-  const t3 = Number(Math.min(1, Math.max(0, (progress - 0.50) / 0.25)).toFixed(3));
+  const t3 = Number(Math.min(1, Math.max(0, (progress - 0.5) / 0.25)).toFixed(3));
   const contentOpacity = t3;
   const contentTranslateY = (1 - t3) * 8;
 
@@ -270,7 +264,7 @@ export const VectorSubstrateCard: React.FC<VectorSubstrateCardProps> = ({
               {demoLoaded ? (
                 <div className="w-full flex items-center justify-between p-2 bg-[#214C3A]/10 border border-[#214C3A] text-left">
                   <div className="flex items-center gap-3">
-                    <FileText className="w-8 h-8 text-[#214C3A]" weight="bold" />
+                    <FileText className="w-8 h-8 text-[#214C3A]" />
                     <div>
                       <div className="text-[10px] font-black text-[#20251F] uppercase">
                         ARKHITECTURA_INVOICE_OCT2023.PNG
@@ -286,12 +280,12 @@ export const VectorSubstrateCard: React.FC<VectorSubstrateCardProps> = ({
                 </div>
               ) : (
                 <>
-                  <UploadSimple
-                    className="h-9 w-9 text-[#20251F]/40 mb-2 group-hover:text-[#214C3A] transition-colors"
-                    weight="bold"
-                  />
+                  <Upload className="h-9 w-9 text-[#20251F]/40 mb-2 group-hover:text-[#214C3A] transition-colors" />
                   <p className="text-xs font-black uppercase tracking-wide text-[#20251F]">
-                    <span className="underline decoration-1 underline-offset-2">CLICK TO UPLOAD</span>, DRAG AND DROP, OR PASTE (CTRL+V)
+                    <span className="underline decoration-1 underline-offset-2">
+                      CLICK TO UPLOAD
+                    </span>
+                    , DRAG AND DROP, OR PASTE (CTRL+V)
                   </p>
                   <p className="text-[9px] font-bold text-[#20251F]/40 tracking-wider uppercase mt-1">
                     SUPPORTS: PNG, JPG, WEBP
@@ -310,7 +304,7 @@ export const VectorSubstrateCard: React.FC<VectorSubstrateCardProps> = ({
             className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-1 text-[8px] sm:text-[9px] font-bold uppercase text-[#20251F]/60"
           >
             <div className="flex items-center gap-1.5">
-              <LockKey className="w-3.5 h-3.5 text-[#214C3A]" weight="bold" />
+              <Lock className="w-3.5 h-3.5 text-[#214C3A]" />
               <span>SECURE LOCAL SCANNING PROTOCOL ACTIVE &bull; IMAGES ARE NEVER LOGGED</span>
             </div>
             <div className="px-2.5 py-0.5 bg-[#FFFDF7] border border-[#20251F]/20 text-[#20251F] flex items-center gap-1.5">
@@ -345,7 +339,11 @@ export const VectorSubstrateCard: React.FC<VectorSubstrateCardProps> = ({
                       }}
                       className="flex items-center gap-1 text-[#20251F] hover:text-[#214C3A] cursor-pointer"
                     >
-                      {copiedDemoJson ? <Check className="w-3 h-3 text-[#214C3A]" /> : <Copy className="w-3 h-3" />}
+                      {copiedDemoJson ? (
+                        <Check className="w-3 h-3 text-[#214C3A]" />
+                      ) : (
+                        <Copy className="w-3 h-3" />
+                      )}
                       <span>{copiedDemoJson ? 'COPIED' : 'COPY JSON'}</span>
                     </button>
                   </div>

@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import jsPDF from 'jspdf';
-import { ExtractionBlock } from '../../history/hooks/useCloudHistory';
-import { X, Copy, Download, Check } from 'lucide-react';
+import { Check, Copy, Download, FileJson, FileText, Printer, Table, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import type { ExtractionBlock } from '../../history/hooks/useCloudHistory';
+
+const FOCUSABLE_SELECTOR =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -10,6 +12,48 @@ interface ExportModalProps {
   selectedIds: string[];
   documentTitle: string;
 }
+
+let cachedNotoSansBase64: string | null = null;
+
+async function getNotoSansBase64(): Promise<string> {
+  if (cachedNotoSansBase64) return cachedNotoSansBase64;
+  const res = await fetch('/fonts/NotoSans-Regular.ttf');
+  if (!res.ok) {
+    throw new Error('Failed to load PDF font binary');
+  }
+  const buffer = await res.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  const chunkSize = 8192;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunkSize)));
+  }
+  cachedNotoSansBase64 = btoa(binary);
+  return cachedNotoSansBase64;
+}
+
+const sanitizeFileName = (name: string): string => {
+  return (name || 'Textify_Extraction').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+};
+
+const downloadBlob = (blob: Blob, fileName: string) => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+const sanitizeCsvField = (field: string): string => {
+  let val = field.replace(/^[\s\t\r]*[=+@-]/, "'$&");
+  if (val.includes('"') || val.includes(',') || val.includes('\n') || val.includes('\r')) {
+    val = `"${val.replace(/"/g, '""')}"`;
+  }
+  return val;
+};
 
 export const ExportModal: React.FC<ExportModalProps> = ({
   isOpen,
@@ -20,6 +64,68 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 }) => {
   const [isExporting, setIsExporting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [fontError, setFontError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    previouslyFocusedRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    const dialog = dialogRef.current;
+    const firstFocusable = dialog?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+    (firstFocusable ?? dialog)?.focus();
+
+    return () => {
+      const previouslyFocused = previouslyFocusedRef.current;
+      previouslyFocusedRef.current = null;
+      if (previouslyFocused?.isConnected) {
+        previouslyFocused.focus();
+      }
+    };
+  }, [isOpen]);
+
+  const handleDialogKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape') {
+      if (!isExporting) {
+        event.preventDefault();
+        onClose();
+      }
+      return;
+    }
+
+    if (event.key !== 'Tab') return;
+
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+      (element) =>
+        !element.hasAttribute('disabled') && element.getAttribute('aria-hidden') !== 'true'
+    );
+
+    if (focusable.length === 0) {
+      event.preventDefault();
+      dialog.focus();
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+
+    if (event.shiftKey) {
+      if (active === first || !dialog.contains(active)) {
+        event.preventDefault();
+        last.focus();
+      }
+    } else if (active === last || !dialog.contains(active)) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -36,20 +142,25 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     }
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     setIsExporting(true);
+    setFontError(null);
     try {
+      const fontBase64 = await getNotoSansBase64();
+      const { jsPDF } = await import('jspdf');
       const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4',
       });
 
-      doc.setFont('helvetica', 'bold');
+      doc.addFileToVFS('NotoSans-Regular.ttf', fontBase64);
+      doc.addFont('NotoSans-Regular.ttf', 'NotoSans', 'normal');
+      doc.setFont('NotoSans', 'normal');
+
       doc.setFontSize(16);
       doc.text(documentTitle || 'Textify Extraction', 20, 20);
 
-      doc.setFont('helvetica', 'normal');
       doc.setFontSize(11);
 
       const pageHeight = doc.internal.pageSize.height;
@@ -68,68 +179,185 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         cursorY += 6;
       }
 
-      doc.save(`${documentTitle.replace(/\s+/g, '_')}_Textify.pdf`);
+      doc.save(`${sanitizeFileName(documentTitle)}_Textify.pdf`);
       onClose();
     } catch (error) {
-      console.error("PDF Generation failed", error);
-      alert("Failed to generate PDF.");
+      console.error('PDF Generation failed', error);
+      setFontError('Failed to load PDF font. Please check your connection.');
     } finally {
       setIsExporting(false);
     }
   };
 
+  const handleExportJSON = () => {
+    const exportData = {
+      title: documentTitle || 'Textify Extraction',
+      exportedAt: new Date().toISOString(),
+      blocks: finalBlocks.map((b, idx) => ({
+        id: b.id,
+        text: b.text,
+        timestamp: b.timestamp,
+        order: b.order ?? (idx + 1) * 1000,
+      })),
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: 'application/json;charset=utf-8',
+    });
+    downloadBlob(blob, `${sanitizeFileName(documentTitle)}_Textify.json`);
+  };
+
+  const handleExportMarkdown = () => {
+    const mdContent =
+      `# ${documentTitle || 'Textify Extraction'}\n\n` +
+      finalBlocks.map((b) => b.text).join('\n\n---\n\n');
+    const blob = new Blob([mdContent], { type: 'text/markdown;charset=utf-8' });
+    downloadBlob(blob, `${sanitizeFileName(documentTitle)}_Textify.md`);
+  };
+
+  const handleExportCSV = () => {
+    const headers = ['Order', 'Block ID', 'Timestamp', 'Text'];
+    const rows = finalBlocks.map((b, idx) => [
+      (b.order ?? (idx + 1) * 1000).toString(),
+      b.id,
+      new Date(b.timestamp).toISOString(),
+      b.text,
+    ]);
+    const csvContent =
+      '\uFEFF' +
+      [
+        headers.map(sanitizeCsvField).join(','),
+        ...rows.map((row) => row.map(sanitizeCsvField).join(',')),
+      ].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    downloadBlob(blob, `${sanitizeFileName(documentTitle)}_Textify.csv`);
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#20251F]/50 backdrop-blur-sm px-4 font-mono-industrial text-[#20251F]">
-      <div className="bg-[#FFFDF7] w-full max-w-2xl border border-[#20251F] shadow-drafting-lg flex flex-col max-h-[90vh] overflow-hidden">
-        
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="export-modal-title"
+        tabIndex={-1}
+        onKeyDown={handleDialogKeyDown}
+        className="bg-[#FFFDF7] w-full max-w-2xl border border-[#20251F] shadow-drafting-lg flex flex-col max-h-[90vh] overflow-hidden"
+      >
         {/* Header */}
         <div className="px-6 py-3 border-b border-[#20251F]/15 flex justify-between items-center bg-[#20251F] text-[#FFFDF7]">
-          <h3 className="text-xs font-black uppercase tracking-[0.15em]">[ EXPORT DOCUMENT ]</h3>
-          <button onClick={onClose} className="text-[#FFFDF7]/70 hover:text-[#E96C3F] transition-colors cursor-pointer" aria-label="Close">
+          <h3 id="export-modal-title" className="text-xs font-black uppercase tracking-[0.15em]">
+            [ EXPORT DOCUMENT ]
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-[#FFFDF7]/70 hover:text-[#E96C3F] transition-colors cursor-pointer"
+            aria-label="Close"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Preview Area */}
         <div className="p-6 overflow-y-auto flex-1 bg-[#F3EFE3]/20">
-          <label className="block text-[9px] font-bold text-[#20251F]/60 uppercase tracking-widest mb-2.5">
-            [ DOCUMENT PREVIEW &bull; {finalBlocks.length} BLOCKS MOUNTED ]
-          </label>
-          <div className="w-full bg-[#FFFDF7] border border-[#20251F]/20 p-5 min-h-[260px] shadow-drafting-sm">
+          {fontError && (
+            <div
+              role="alert"
+              className="mb-4 p-3 bg-[#E96C3F]/10 border border-[#E96C3F] text-[#E96C3F] text-xs font-mono font-bold uppercase"
+            >
+              {fontError}
+            </div>
+          )}
+
+          <div className="flex justify-between items-center mb-2.5">
+            <label className="block text-[9px] font-bold text-[#20251F]/60 uppercase tracking-widest">
+              [ DOCUMENT PREVIEW &bull; {finalBlocks.length} BLOCKS MOUNTED ]
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleExportJSON}
+                disabled={finalBlocks.length === 0}
+                className="px-2.5 py-1 text-[9px] font-bold tracking-wide uppercase border border-[#20251F]/20 hover:border-[#20251F] bg-[#FFFDF7] flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+                title="Download JSON"
+              >
+                <FileJson className="w-3 h-3 text-[#214C3A]" /> JSON
+              </button>
+              <button
+                type="button"
+                onClick={handleExportMarkdown}
+                disabled={finalBlocks.length === 0}
+                className="px-2.5 py-1 text-[9px] font-bold tracking-wide uppercase border border-[#20251F]/20 hover:border-[#20251F] bg-[#FFFDF7] flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+                title="Download Markdown"
+              >
+                <FileText className="w-3 h-3 text-[#214C3A]" /> MD
+              </button>
+              <button
+                type="button"
+                onClick={handleExportCSV}
+                disabled={finalBlocks.length === 0}
+                className="px-2.5 py-1 text-[9px] font-bold tracking-wide uppercase border border-[#20251F]/20 hover:border-[#20251F] bg-[#FFFDF7] flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+                title="Download CSV"
+              >
+                <Table className="w-3 h-3 text-[#214C3A]" /> CSV
+              </button>
+              <button
+                type="button"
+                onClick={handlePrint}
+                disabled={finalBlocks.length === 0}
+                className="px-2.5 py-1 text-[9px] font-bold tracking-wide uppercase border border-[#20251F]/20 hover:border-[#20251F] bg-[#FFFDF7] flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+                title="Print via OS Dialog (CJK/Emoji support)"
+              >
+                <Printer className="w-3 h-3 text-[#214C3A]" /> PRINT
+              </button>
+            </div>
+          </div>
+
+          <div className="w-full bg-[#FFFDF7] border border-[#20251F]/20 p-5 min-h-[240px] shadow-drafting-sm">
             {finalBlocks.length === 0 ? (
               <p className="text-[#20251F]/40 text-center italic text-xs uppercase tracking-wide mt-10">
                 [ NO BLOCKS SELECTED. SELECT BLOCKS IN THE WORKSPACE BEFORE INITIATING EXPORT ]
               </p>
             ) : (
-              <pre className="text-xs font-mono text-[#20251F] whitespace-pre-wrap leading-relaxed">
+              <pre className="text-xs font-mono text-[#20251F] whitespace-pre-wrap leading-relaxed select-text">
                 {combinedText}
               </pre>
             )}
           </div>
+          <p className="mt-2 text-[8px] font-mono text-[#20251F]/50 uppercase tracking-wide text-right">
+            PRINT USES OS RENDERING FOR NATIVE CJK / EMOJI GLYPH FIDELITY
+          </p>
         </div>
 
         {/* Footer Actions */}
         <div className="px-6 py-4 border-t border-[#20251F]/15 flex flex-col md:flex-row justify-between items-center gap-3 bg-[#FFFDF7] font-bold text-[9px] tracking-wide uppercase">
-          <button 
-            onClick={handleCopyText} 
+          <button
+            onClick={handleCopyText}
             disabled={finalBlocks.length === 0}
             className="w-full md:w-auto px-4 py-2 border border-[#20251F]/20 bg-[#FFFDF7] text-[#20251F] hover:bg-[#20251F] hover:text-[#FFFDF7] transition-all disabled:opacity-40 flex items-center justify-center gap-2 shadow-drafting-sm cursor-pointer"
           >
             {copied ? (
-              <><Check className="w-3.5 h-3.5" /> COPIED TO CLIPBOARD</>
+              <>
+                <Check className="w-3.5 h-3.5" /> COPIED TO CLIPBOARD
+              </>
             ) : (
-              <><Copy className="w-3.5 h-3.5" /> COPY RAW TEXT</>
+              <>
+                <Copy className="w-3.5 h-3.5" /> COPY RAW TEXT
+              </>
             )}
           </button>
 
           <div className="flex gap-2.5 w-full md:w-auto">
-            <button 
-              onClick={onClose} 
+            <button
+              onClick={onClose}
               className="flex-1 md:flex-none px-4 py-2 border border-[#20251F]/20 bg-transparent hover:border-[#20251F] text-[#20251F] transition-colors cursor-pointer"
             >
               CANCEL
             </button>
-            <button 
+            <button
               onClick={handleExportPDF}
               disabled={finalBlocks.length === 0 || isExporting}
               className="flex-1 md:flex-none px-5 py-2 bg-[#214C3A] text-[#FFFDF7] hover:bg-[#183a2b] transition-all disabled:opacity-40 flex items-center justify-center gap-2 shadow-drafting-sm cursor-pointer"
@@ -139,7 +367,6 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             </button>
           </div>
         </div>
-
       </div>
     </div>
   );
