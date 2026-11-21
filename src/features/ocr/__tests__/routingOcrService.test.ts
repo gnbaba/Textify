@@ -20,14 +20,13 @@ const mockFile = new File(['(⌐□_□)'], 'test-image.png', { type: 'image/png
 describe('RoutingOcrService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv('VITE_GEMINI_API_KEY', 'mock-key');
   });
 
   afterEach(() => {
-    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   });
 
-  it('should run tesseractOcrService first with pre-configured automatic parameters', async () => {
+  it('should run tesseractOcrService first with pre-configured automatic parameters by default', async () => {
     vi.mocked(tesseractOcrService.extractText).mockResolvedValueOnce({
       text: 'local text',
       confidence: 85,
@@ -49,54 +48,48 @@ describe('RoutingOcrService', () => {
       }),
       undefined
     );
-    const passedOptions = vi.mocked(tesseractOcrService.extractText).mock.calls[0][2];
-    expect(passedOptions).not.toHaveProperty('brightness');
-    expect(passedOptions).not.toHaveProperty('contrast');
     expect(geminiOcrService.extractText).not.toHaveBeenCalled();
   });
 
-  it('should fallback to geminiOcrService when tesseractOcrService throws an error', async () => {
+  it('should NOT fallback to geminiOcrService when tesseractOcrService throws an error (local only by default)', async () => {
     vi.mocked(tesseractOcrService.extractText).mockRejectedValueOnce(
       new Error('Tesseract crashed')
     );
-    vi.mocked(geminiOcrService.extractText).mockResolvedValueOnce({ text: 'gemini fallback text' });
 
-    const result = await routingOcrService.extractText(mockFile, 'document');
-
-    expect(result.text).toBe('gemini fallback text');
+    await expect(routingOcrService.extractText(mockFile, 'document')).rejects.toThrow(
+      'Tesseract crashed'
+    );
     expect(tesseractOcrService.extractText).toHaveBeenCalledTimes(1);
-    expect(geminiOcrService.extractText).toHaveBeenCalledTimes(1);
+    expect(geminiOcrService.extractText).not.toHaveBeenCalled();
   });
 
-  it('should fallback to geminiOcrService when tesseractOcrService returns empty text', async () => {
+  it('should NOT fallback to geminiOcrService when tesseractOcrService returns empty text', async () => {
     vi.mocked(tesseractOcrService.extractText).mockResolvedValueOnce({
       text: '   ',
       confidence: 90,
     });
-    vi.mocked(geminiOcrService.extractText).mockResolvedValueOnce({ text: 'gemini fallback text' });
 
-    const result = await routingOcrService.extractText(mockFile, 'document');
-
-    expect(result.text).toBe('gemini fallback text');
+    await expect(routingOcrService.extractText(mockFile, 'document')).rejects.toThrow(
+      'No readable text detected in selected region.'
+    );
     expect(tesseractOcrService.extractText).toHaveBeenCalledTimes(1);
-    expect(geminiOcrService.extractText).toHaveBeenCalledTimes(1);
+    expect(geminiOcrService.extractText).not.toHaveBeenCalled();
   });
 
-  it('should fallback to geminiOcrService when tesseractOcrService returns low confidence score', async () => {
+  it('should NOT fallback to geminiOcrService when tesseractOcrService returns low confidence score', async () => {
     vi.mocked(tesseractOcrService.extractText).mockResolvedValueOnce({
       text: 'poor text quality',
       confidence: 45,
     });
-    vi.mocked(geminiOcrService.extractText).mockResolvedValueOnce({ text: 'gemini fallback text' });
 
     const result = await routingOcrService.extractText(mockFile, 'document');
 
-    expect(result.text).toBe('gemini fallback text');
+    expect(result.text).toBe('poor text quality');
     expect(tesseractOcrService.extractText).toHaveBeenCalledTimes(1);
-    expect(geminiOcrService.extractText).toHaveBeenCalledTimes(1);
+    expect(geminiOcrService.extractText).not.toHaveBeenCalled();
   });
 
-  it('should propagate AbortError without triggering Gemini fallback', async () => {
+  it('should propagate AbortError without triggering Gemini', async () => {
     const abortError = new DOMException('The operation was aborted.', 'AbortError');
     const controller = new AbortController();
     vi.mocked(tesseractOcrService.extractText).mockRejectedValueOnce(abortError);
@@ -114,15 +107,21 @@ describe('RoutingOcrService', () => {
     expect(geminiOcrService.extractText).not.toHaveBeenCalled();
   });
 
-  it('should throw error when local OCR returns empty text and Gemini key is missing', async () => {
-    vi.stubEnv('VITE_GEMINI_API_KEY', '');
-    vi.mocked(tesseractOcrService.extractText).mockResolvedValueOnce({
-      text: '   ',
-      confidence: 90,
+  it('should route to geminiOcrService when engine === "ai" is explicitly requested', async () => {
+    vi.mocked(geminiOcrService.extractText).mockResolvedValueOnce({
+      text: 'gemini enhanced text',
     });
 
-    await expect(routingOcrService.extractText(mockFile, 'document')).rejects.toThrow(
-      'No readable text detected in selected region.'
+    const result = await routingOcrService.extractText(mockFile, 'document', { engine: 'ai' });
+
+    expect(result.text).toBe('gemini enhanced text');
+    expect(tesseractOcrService.extractText).not.toHaveBeenCalled();
+    expect(geminiOcrService.extractText).toHaveBeenCalledTimes(1);
+    expect(geminiOcrService.extractText).toHaveBeenCalledWith(
+      mockFile,
+      'document',
+      expect.objectContaining({ engine: 'ai' }),
+      undefined
     );
   });
 });

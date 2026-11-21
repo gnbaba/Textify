@@ -8,7 +8,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { LoginModal } from '../../features/auth/components/LoginModal';
 import { useAuth } from '../../features/auth/hooks/useAuth';
 import { useWorkspace } from '../../shared/context/WorkspaceContext';
@@ -128,11 +128,15 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
     setOpenMenuId(null);
   };
 
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
+  useEffect(() => {
+    setAvatarLoadFailed(false);
+  }, [user?.photoURL]);
+
   const handleMobileNavClose = () => {
     if (window.innerWidth < 768) setIsSidebarOpen(false);
   };
 
-  const safeAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || user?.email || 'User')}&background=20251F&color=FFFDF7&rounded=false`;
 
   return (
     <div className="flex h-screen bg-[#F3EFE3] overflow-hidden font-mono-industrial relative text-[#20251F]">
@@ -309,15 +313,18 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
             {user ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <img
-                    src={user.photoURL || safeAvatarUrl}
-                    alt="Profile"
-                    className="w-10 h-10 border border-[#20251F]/20 object-cover bg-[#F3EFE3]"
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src = safeAvatarUrl;
-                    }}
-                  />
+                  {user.photoURL && !avatarLoadFailed ? (
+                    <img
+                      src={user.photoURL}
+                      alt="Profile"
+                      className="w-10 h-10 border border-[#20251F]/20 object-cover bg-[#F3EFE3]"
+                      onError={() => setAvatarLoadFailed(true)}
+                    />
+                  ) : (
+                    <div className="w-10 h-10 border border-[#20251F]/20 bg-[#214C3A] text-[#FFFDF7] flex items-center justify-center font-bold text-xs select-none uppercase">
+                      {(user.displayName || user.email || 'U').slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
                   <div className="min-w-0 flex-1">
                     <p className="font-extrabold text-[10px] tracking-wide text-[#20251F] truncate uppercase">
                       {user.displayName || 'SYS.USER'}

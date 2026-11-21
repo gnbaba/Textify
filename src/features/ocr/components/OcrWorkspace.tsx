@@ -129,13 +129,14 @@ export const OcrWorkspace: React.FC = () => {
     saveBlock,
     reorderBlocks,
   } = useWorkspace();
-  const { status, progress, process } = useOcrProcessor(routingOcrService);
+  const { status, progress, process, cancel } = useOcrProcessor(routingOcrService);
 
   const prevUidRef = useRef(user?.uid);
   useEffect(() => {
     const prevUid = prevUidRef.current;
     const currUid = user?.uid;
     if (prevUid && prevUid !== currUid) {
+      cancel();
       setPendingBlocks([]);
       pendingBlocksRef.current = [];
       setDraftDocId(null);
@@ -145,9 +146,12 @@ export const OcrWorkspace: React.FC = () => {
       setWorkspaceError(null);
     }
     prevUidRef.current = currUid;
-  }, [user?.uid]);
+  }, [user?.uid, cancel]);
 
   const [mode, setMode] = useState<ExtractionMode>('document');
+  const [isCloudAiEnabled, setIsCloudAiEnabled] = useState(false);
+  const [showCloudConsentModal, setShowCloudConsentModal] = useState(false);
+  const [isEnhancingCloud, setIsEnhancingCloud] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [draftDocId, setDraftDocId] = useState<string | null>(null);
@@ -588,6 +592,110 @@ export const OcrWorkspace: React.FC = () => {
     setCropBox({ x: 0, y: 0, w: 100, h: 100 });
   };
 
+  const getCroppedImageFile = (): Promise<File | null> => {
+    return new Promise((resolve) => {
+      if (!sourceImgRef.current || !selectedFile) {
+        resolve(null);
+        return;
+      }
+      const img = sourceImgRef.current;
+      const cropX = (cropBox.x / 100) * img.naturalWidth;
+      const cropY = (cropBox.y / 100) * img.naturalHeight;
+      const cropW = (cropBox.w / 100) * img.naturalWidth;
+      const cropH = (cropBox.h / 100) * img.naturalHeight;
+
+      let targetW = cropW;
+      let targetH = cropH;
+
+      if (cropW < 1200) {
+        targetW = cropW * 2;
+        targetH = cropH * 2;
+      }
+
+      const longestSide = Math.max(targetW, targetH);
+      if (longestSide > 2400) {
+        const scale = 2400 / longestSide;
+        targetW = targetW * scale;
+        targetH = targetH * scale;
+      }
+
+      const totalPixels = targetW * targetH;
+      if (totalPixels > 8_000_000) {
+        const scale = Math.sqrt(8_000_000 / totalPixels);
+        targetW = targetW * scale;
+        targetH = targetH * scale;
+      }
+
+      targetW = Math.max(1, Math.round(targetW));
+      targetH = Math.max(1, Math.round(targetH));
+
+      const canvas = document.createElement('canvas');
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(null);
+        return;
+      }
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, targetW, targetH);
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          resolve(null);
+          return;
+        }
+        const croppedFile = new File([blob], selectedFile.name.replace(/\.[^/.]+$/, '') + '.png', {
+          type: 'image/png',
+          lastModified: Date.now(),
+        });
+        resolve(croppedFile);
+      }, 'image/png');
+    });
+  };
+
+  const handleConfirmCloudAi = async () => {
+    setShowCloudConsentModal(false);
+    if (!user) {
+      setIsLoginModalOpen(true);
+      return;
+    }
+    setIsEnhancingCloud(true);
+    setIsPreparing(true);
+    setIsProcessing(true);
+    setWorkspaceError(null);
+
+    try {
+      const croppedFile = await getCroppedImageFile();
+      if (!croppedFile) {
+        setWorkspaceError('Failed to generate cropped image for Cloud AI.');
+        return;
+      }
+
+      const res = await process(croppedFile, mode, { engine: 'ai' });
+      if (res.ok && res.text.trim()) {
+        setActiveImageSrc(null);
+        setSelectedFile(null);
+        setWorkspaceError(null);
+        stageExtractedText(res.text);
+      } else if (!res.ok && res.aborted) {
+        return;
+      } else {
+        setWorkspaceError(res.ok ? 'No readable text detected in selected region.' : res.error);
+      }
+    } catch (error) {
+      console.error('Cloud AI Processing error:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      setWorkspaceError(`CLOUD AI FAILED: ${errorMessage}`);
+    } finally {
+      setIsEnhancingCloud(false);
+      setIsPreparing(false);
+      setIsProcessing(false);
+    }
+  };
+
   const handleRunOcr = async () => {
     if (!selectedFile || !activeImageSrc || !sourceImgRef.current) return;
 
@@ -621,88 +729,45 @@ export const OcrWorkspace: React.FC = () => {
     }
 
     try {
-      // 1. Crop image onto canvas with dual-dimension capped upscaling
-      const img = sourceImgRef.current;
-      const cropX = (cropBox.x / 100) * img.naturalWidth;
-      const cropY = (cropBox.y / 100) * img.naturalHeight;
-      const cropW = (cropBox.w / 100) * img.naturalWidth;
-      const cropH = (cropBox.h / 100) * img.naturalHeight;
-
-      let targetW = cropW;
-      let targetH = cropH;
-
-      if (cropW < 1200) {
-        targetW = cropW * 2;
-        targetH = cropH * 2;
+      const croppedFile = await getCroppedImageFile();
+      if (!croppedFile) {
+        setWorkspaceError('Failed to generate cropped image.');
+        setIsPreparing(false);
+        setIsProcessing(false);
+        return;
       }
 
-      // Enforce dual caps: max 2400px on the longest side AND <= 8_000_000 total pixels
-      const longestSide = Math.max(targetW, targetH);
-      if (longestSide > 2400) {
-        const scale = 2400 / longestSide;
-        targetW = targetW * scale;
-        targetH = targetH * scale;
-      }
+      try {
+        const result = await process(croppedFile, mode);
 
-      const totalPixels = targetW * targetH;
-      if (totalPixels > 8_000_000) {
-        const scale = Math.sqrt(8_000_000 / totalPixels);
-        targetW = targetW * scale;
-        targetH = targetH * scale;
-      }
-
-      targetW = Math.max(1, Math.round(targetW));
-      targetH = Math.max(1, Math.round(targetH));
-
-      const canvas = document.createElement('canvas');
-      canvas.width = targetW;
-      canvas.height = targetH;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Failed to get canvas 2D context for cropping.');
-
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, targetW, targetH);
-
-      canvas.toBlob(async (blob) => {
-        if (!blob) {
-          setWorkspaceError('Failed to generate cropped image.');
-          setIsPreparing(false);
-          setIsProcessing(false);
+        if (result.ok && result.text.trim()) {
+          setActiveImageSrc(null);
+          setSelectedFile(null);
+          setWorkspaceError(null);
+          stageExtractedText(result.text);
+        } else if (!result.ok && result.aborted) {
           return;
-        }
-
-        const croppedFile = new File([blob], selectedFile.name.replace(/\.[^/.]+$/, '') + '.png', {
-          type: 'image/png',
-          lastModified: Date.now(),
-        });
-
-        try {
-          const result = await process(croppedFile, mode);
-
-          if (result.ok && result.text.trim()) {
-            setActiveImageSrc(null);
-            setSelectedFile(null);
-            setWorkspaceError(null);
-            stageExtractedText(result.text);
-          } else if (!result.ok && result.aborted) {
-            return;
-          } else {
-            setWorkspaceError(
-              result.ok ? 'No readable text detected in selected region.' : result.error
-            );
+        } else {
+          const errMsg = result.ok ? 'No readable text detected in selected region.' : result.error;
+          setWorkspaceError(errMsg);
+          if (isCloudAiEnabled) {
+            if (!user) {
+              setIsLoginModalOpen(true);
+            } else {
+              setShowCloudConsentModal(true);
+            }
           }
-        } catch (error) {
-          console.error('Processing error:', error);
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          setWorkspaceError(`OCR FAILED: ${errorMessage}`);
-        } finally {
-          setIsPreparing(false);
-          setTimeout(() => {
-            setIsProcessing(false);
-          }, 3000);
         }
-      }, 'image/png');
+      } catch (error) {
+        console.error('Processing error:', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        setWorkspaceError(`OCR FAILED: ${errorMessage}`);
+      } finally {
+        setIsPreparing(false);
+        setTimeout(() => {
+          setIsProcessing(false);
+        }, 3000);
+      }
     } catch (error) {
       console.error('Cropping and processing failed:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -968,6 +1033,29 @@ export const OcrWorkspace: React.FC = () => {
           </div>
         </div>
 
+        {/* Cloud AI Enhancement Toggle */}
+        <div className="flex items-center justify-between px-3 py-2 bg-[#FFFDF7] border border-[#20251F]/20 text-[10px] font-bold uppercase tracking-wider shadow-drafting-sm">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={isCloudAiEnabled}
+              onChange={(e) => {
+                const nextChecked = e.target.checked;
+                setIsCloudAiEnabled(nextChecked);
+                if (nextChecked && !user) {
+                  setIsLoginModalOpen(true);
+                }
+              }}
+              disabled={isProcessing}
+              className="w-3.5 h-3.5 accent-[#214C3A] cursor-pointer"
+            />
+            <span className="text-[#20251F]">[ OPTIONAL ] Enable Gemini Cloud AI Enhancement</span>
+          </label>
+          <span className="text-[9px] text-[#20251F]/60">
+            {user ? '20 SCANS / DAY QUOTA' : 'REQUIRES AUTHENTICATION'}
+          </span>
+        </div>
+
         {workspaceError && (
           <div
             role="alert"
@@ -980,6 +1068,24 @@ export const OcrWorkspace: React.FC = () => {
                   SCANNING TERMINATED
                 </span>
                 <span className="break-words">{workspaceError}</span>
+                {activeImageSrc && (
+                  <div className="mt-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!user) {
+                          setIsLoginModalOpen(true);
+                        } else {
+                          setShowCloudConsentModal(true);
+                        }
+                      }}
+                      disabled={isProcessing}
+                      className="bg-[#214C3A] text-[#FFFDF7] px-3 py-1.5 border border-[#20251F]/20 hover:bg-[#183a2b] transition-all text-[9px] font-bold tracking-wider uppercase cursor-pointer disabled:opacity-50"
+                    >
+                      [ ENHANCE WITH CLOUD AI ]
+                    </button>
+                  </div>
+                )}
               </div>
               <button
                 type="button"
@@ -1121,7 +1227,7 @@ export const OcrWorkspace: React.FC = () => {
             </div>
 
             {/* Actions Bar */}
-            <div className="flex justify-end gap-3 border-t border-[#20251F]/15 pt-4 font-bold text-[10px] uppercase">
+            <div className="flex flex-wrap justify-end gap-3 border-t border-[#20251F]/15 pt-4 font-bold text-[10px] uppercase">
               <button
                 onClick={() => {
                   setActiveImageSrc(null);
@@ -1135,6 +1241,22 @@ export const OcrWorkspace: React.FC = () => {
               >
                 [ DISCARD / CANCEL ]
               </button>
+              {isCloudAiEnabled && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!user) {
+                      setIsLoginModalOpen(true);
+                    } else {
+                      setShowCloudConsentModal(true);
+                    }
+                  }}
+                  disabled={isProcessing}
+                  className="border border-[#214C3A] text-[#214C3A] hover:bg-[#214C3A] hover:text-[#FFFDF7] px-5 py-2.5 transition-all flex items-center gap-2 shadow-drafting-sm cursor-pointer disabled:opacity-50"
+                >
+                  [ ENHANCE WITH CLOUD AI ]
+                </button>
+              )}
               <button
                 onClick={handleRunOcr}
                 disabled={isProcessing}
@@ -1163,12 +1285,16 @@ export const OcrWorkspace: React.FC = () => {
           <div className="w-full border border-[#20251F]/20 h-5 bg-[#FFFDF7] overflow-hidden relative shadow-drafting-sm">
             <div
               className="bg-[#214C3A] h-full transition-all duration-300 relative"
-              style={{ width: `${progress > 0 ? progress : 8}%` }}
+              style={{
+                width: isEnhancingCloud ? '100%' : `${progress > 0 ? progress : 8}%`,
+              }}
             >
               <div className="absolute inset-0 scanlines opacity-30" />
             </div>
             <span className="absolute inset-0 flex items-center justify-center text-[8px] font-extrabold tracking-widest text-[#FFFDF7] mix-blend-difference uppercase">
-              OCR ANALYSIS IN PROGRESS &bull; {Math.round(progress)}%
+              {isEnhancingCloud
+                ? 'CLOUD AI ENHANCEMENT IN PROGRESS...'
+                : `OCR ANALYSIS IN PROGRESS • ${Math.round(progress)}%`}
             </span>
           </div>
         )}
@@ -1337,6 +1463,55 @@ export const OcrWorkspace: React.FC = () => {
                   className="w-full text-[#20251F]/60 py-2.5 px-4 border border-[#20251F]/20 hover:border-[#20251F] transition-colors cursor-pointer"
                 >
                   CLOSE PANEL
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Cloud AI Consent Pre-Flight */}
+      {showCloudConsentModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#20251F]/50 backdrop-blur-sm px-4">
+          <div className="bg-[#FFFDF7] w-full max-w-md border border-[#20251F] shadow-drafting-lg overflow-hidden">
+            <div className="bg-[#20251F] text-[#FFFDF7] px-4 py-2.5 flex items-center justify-between font-mono-industrial text-[9px] font-bold tracking-[0.15em] uppercase">
+              <span>[ CLOUD TRANSMISSION CONSENT ]</span>
+              <button
+                onClick={() => setShowCloudConsentModal(false)}
+                className="hover:text-[#E96C3F] transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <h3 className="font-extrabold text-[12px] uppercase tracking-wide mb-2 text-[#20251F]">
+                TRANSMIT IMAGE TO GEMINI CLOUD AI?
+              </h3>
+              <p className="text-[10px] font-semibold text-[#20251F]/70 mb-4 uppercase leading-relaxed tracking-[0.02em]">
+                You are about to transmit the cropped image region to Google Gemini via our secure
+                serverless gateway (
+                <code className="lowercase text-[#20251F] font-bold">/api/gemini-ocr</code>).
+              </p>
+              <div className="bg-[#20251F]/5 border border-[#20251F]/15 p-3 text-[9px] font-bold uppercase space-y-1 mb-6 text-[#20251F]/80">
+                <div>• Model: Google Gemini (Serverless Proxy)</div>
+                <div>• Daily Allowance: 20 Cloud AI scans per account</div>
+                <div>• Privacy: Image payload is processed in memory and never stored</div>
+              </div>
+              <div className="flex justify-end gap-2.5 font-mono-industrial text-[9px] font-bold uppercase">
+                <button
+                  onClick={() => setShowCloudConsentModal(false)}
+                  className="px-4 py-2 border border-[#20251F]/20 hover:border-[#20251F] text-[#20251F] transition-colors cursor-pointer"
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={() => void handleConfirmCloudAi()}
+                  disabled={isEnhancingCloud}
+                  className="px-4 py-2 bg-[#214C3A] hover:bg-[#183a2b] text-white transition-colors cursor-pointer shadow-drafting-sm disabled:opacity-50"
+                >
+                  {isEnhancingCloud ? 'ENHANCING...' : '[ CONFIRM & SEND ]'}
                 </button>
               </div>
             </div>

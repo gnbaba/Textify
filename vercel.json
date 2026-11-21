@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/gemini-ocr.ts": {
+      "maxDuration": 25
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",

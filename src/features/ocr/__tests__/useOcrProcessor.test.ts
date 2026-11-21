@@ -192,4 +192,72 @@ describe('useOcrProcessor', () => {
       expect(result.current.status).toBe('success');
     });
   });
+
+  it('should forward engine: "ai" option to ocrService.extractText', async () => {
+    vi.mocked(mockOcrService.extractText).mockResolvedValueOnce({ text: 'Cloud AI Text' });
+
+    const { result } = renderHook(() => useOcrProcessor(mockOcrService));
+    let processPromise: Promise<OcrProcessResult> | undefined;
+
+    act(() => {
+      processPromise = result.current.process(mockFile, 'document', { engine: 'ai' });
+    });
+
+    let processResult: OcrProcessResult | undefined;
+    await act(async () => {
+      processResult = await processPromise;
+    });
+
+    expect(processResult).toEqual({ ok: true, text: 'Cloud AI Text' });
+    expect(mockOcrService.extractText).toHaveBeenCalledWith(
+      mockFile,
+      'document',
+      expect.objectContaining({
+        engine: 'ai',
+        isStale: expect.any(Function),
+        signal: expect.any(AbortSignal),
+      }),
+      expect.any(Function)
+    );
+  });
+
+  it('should abort in-flight request and reset state when cancel() is called', async () => {
+    let capturedSignal: AbortSignal | undefined;
+    vi.mocked(mockOcrService.extractText).mockImplementationOnce(
+      (_file, _mode, options) =>
+        new Promise((_resolve, reject) => {
+          capturedSignal = options?.signal;
+          options?.signal?.addEventListener('abort', () => {
+            reject(new DOMException('The operation was aborted.', 'AbortError'));
+          });
+        })
+    );
+
+    const { result } = renderHook(() => useOcrProcessor(mockOcrService));
+    let processPromise: Promise<OcrProcessResult> | undefined;
+
+    act(() => {
+      processPromise = result.current.process(mockFile);
+    });
+
+    expect(result.current.status).toBe('loading');
+    expect(capturedSignal?.aborted).toBe(false);
+
+    act(() => {
+      result.current.cancel();
+    });
+
+    expect(capturedSignal?.aborted).toBe(true);
+    expect(result.current.status).toBe('idle');
+    expect(result.current.error).toBeNull();
+    expect(result.current.text).toBe('');
+    expect(result.current.progress).toBe(0);
+
+    let processResult: OcrProcessResult | undefined;
+    await act(async () => {
+      processResult = await processPromise;
+    });
+
+    expect(processResult).toEqual({ ok: false, aborted: true });
+  });
 });

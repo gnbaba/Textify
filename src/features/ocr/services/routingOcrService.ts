@@ -23,7 +23,12 @@ class RoutingOcrService implements IOcrService {
     options?: OcrOptions,
     onProgress?: (progress: number) => void
   ): Promise<{ text: string; confidence?: number }> {
-    // 1. Configure automatic background parameters based on extraction mode
+    // If Cloud AI is explicitly requested, route directly to Gemini service
+    if (options?.engine === 'ai') {
+      return geminiOcrService.extractText(file, mode, options, onProgress);
+    }
+
+    // Default: 100% local Tesseract execution with zero network fallback
     const autoOptions: OcrOptions = {
       ...options,
       language: options?.language ?? 'eng',
@@ -35,64 +40,21 @@ class RoutingOcrService implements IOcrService {
     };
 
     let localResult: { text: string; confidence?: number } | null = null;
-    let localError: Error | null = null;
 
     try {
-      // 2. Always attempt local Tesseract processing first
       localResult = await tesseractOcrService.extractText(file, mode, autoOptions, onProgress);
     } catch (err) {
       if (isAbortError(err)) {
         throw err;
       }
-
-      localError = err instanceof Error ? err : new Error(String(err));
-      console.warn('Local Tesseract OCR processing failed:', err);
+      throw err;
     }
 
-    // 3. Evaluate if we need to fall back to Gemini AI
-    const hasGeminiKey = !!import.meta.env.VITE_GEMINI_API_KEY;
-    const isLocalEmpty = !localResult || !localResult.text || localResult.text.trim() === '';
-    const isLocalLowConfidence =
-      localResult && localResult.confidence !== undefined && localResult.confidence < 60;
-
-    if (hasGeminiKey && (localError || isLocalEmpty || isLocalLowConfidence)) {
-      console.log(
-        `Triggering Gemini AI fallback. Reason: ${
-          localError
-            ? 'Tesseract threw error'
-            : isLocalEmpty
-              ? 'Tesseract returned empty'
-              : `Low Tesseract confidence (${localResult?.confidence}%)`
-        }`
-      );
-
-      try {
-        // Run vision OCR using Gemini API
-        return await geminiOcrService.extractText(file, mode, autoOptions, onProgress);
-      } catch (geminiErr) {
-        if (isAbortError(geminiErr)) {
-          throw geminiErr;
-        }
-
-        console.error('Gemini AI fallback failed:', geminiErr);
-        // If Gemini failed too, and Tesseract had some text, return Tesseract's result as a last resort
-        if (localResult && localResult.text && localResult.text.trim() !== '') {
-          return localResult;
-        }
-        throw geminiErr; // Otherwise rethrow the Gemini error
-      }
-    }
-
-    // 4. If no fallback is triggered (or Gemini API key is missing), return local results or throw the local error
-    if (localError) {
-      throw localError;
-    }
-
-    if (isLocalEmpty) {
+    if (!localResult || !localResult.text || localResult.text.trim() === '') {
       throw new Error('No readable text detected in selected region.');
     }
 
-    return localResult!;
+    return localResult;
   }
 }
 

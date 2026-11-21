@@ -32,6 +32,18 @@ export const useOcrProcessor = (ocrService: IOcrService) => {
   const requestIdRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  const cancel = useCallback(() => {
+    requestIdRef.current += 1;
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setStatus('idle');
+    setError(null);
+    setText('');
+    setProgress(0);
+  }, []);
+
   useEffect(() => {
     return () => {
       requestIdRef.current += 1;
@@ -61,6 +73,7 @@ export const useOcrProcessor = (ocrService: IOcrService) => {
 
       const mergedOptions: OcrOptions = {
         ...options,
+        engine: options?.engine,
         signal: abortController.signal,
         isStale,
       };
@@ -132,5 +145,6 @@ export const useOcrProcessor = (ocrService: IOcrService) => {
     error,
     progress,
     process,
+    cancel,
   };
 };
